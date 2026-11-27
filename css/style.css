@@ -134,11 +134,16 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .lang:hover{color:var(--ink);border-color:var(--acc2)}
 .lang:focus-visible{outline:3px solid var(--acc2);outline-offset:2px}
 .about{display:grid;grid-template-columns:minmax(200px,340px) minmax(0,1fr);gap:clamp(24px,5vw,64px);align-items:center}
-.about-pic{position:relative;z-index:6;width:100%;border-radius:28px;transform:rotate(-2deg)}
+/* --ex/--ey: where the eye is in the logo drawing; the merge starts from there */
+.about-pic{--ex:61.5%;--ey:44.5%;position:relative;z-index:6;width:100%;border-radius:28px;transform:rotate(-2deg);transition:box-shadow .6s}
+.about-pic:not(.empty){box-shadow:0 18px 50px rgba(91,76,240,.25),0 0 0 1px var(--line)}
 .about-pic::before{content:"";position:absolute;inset:0;border-radius:28px;border:2px dashed rgba(154,146,247,.5);background:rgba(43,39,80,.3);opacity:0;transition:opacity .4s}
 .about-pic.empty::before{opacity:1}
-.about-logo{display:block;width:100%;height:auto;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,76,240,.25),0 0 0 1px var(--line);transition:opacity .5s ease,transform .7s cubic-bezier(.3,1.6,.5,1)}
-.about-pic.empty .about-logo{opacity:0;transform:scale(.82);box-shadow:none}
+.about-logo{display:block;width:100%;height:auto;border-radius:28px;background:#fff;clip-path:circle(90% at var(--ex) var(--ey));transition:clip-path .95s cubic-bezier(.55,0,.25,1),opacity .15s}
+.about-pic.empty .about-logo{clip-path:circle(0% at var(--ex) var(--ey));opacity:0;transition:clip-path .6s cubic-bezier(.5,0,.75,0),opacity .2s .55s}
+.about-pic::after{content:"";position:absolute;inset:0;border-radius:28px;pointer-events:none;background:radial-gradient(circle at var(--ex) var(--ey),rgba(232,224,255,.95),rgba(124,92,255,.5) 18%,rgba(124,92,255,0) 50%);opacity:0}
+.about-pic.merge::after{animation:merge 1s ease-out}
+@keyframes merge{0%{opacity:0;transform:scale(.5)}22%{opacity:1}100%{opacity:0;transform:scale(1.2)}}
 .eyebrow{color:var(--acc2);font-weight:600;font-size:14px;letter-spacing:.02em;margin-bottom:10px}
 .quote{margin:24px 0 0;padding:4px 0 4px 18px;border-left:3px solid var(--acc)}
 .quote blockquote{margin:0;font:600 clamp(18px,2vw,22px)/1.35 Sora,Inter,sans-serif;letter-spacing:-.01em}

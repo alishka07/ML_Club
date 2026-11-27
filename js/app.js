@@ -425,6 +425,16 @@ function tileAnchor(){
  return{x:r.left+T/2-SR.left,y:r.top+(T-5.2*s*ppu)/2+3.1*s*ppu-SR.top,s};
 }
 const homeAnchor=()=>({x:homeS.x,y:homeS.y-lift*OH*0.07,s:sc});
+// The pose of the drawn octopus in the logo, as fractions of the picture: where the eye is, how big it
+// is (sets his scale), how the head leans, and where the eight arm curls end. Near the end of the crawl
+// he blends into this pose so that the drawing can take over from him.
+const LOGO={eye:[0.615,0.445],eyeR:0.067,lean:-0.52,
+ tips:[[0.19,0.30],[0.47,0.28],[0.32,0.48],[0.17,0.80],[0.38,0.85],[0.77,0.76],[0.93,0.77],[0.94,0.45]]};
+let lq=0,glowB=0;
+function logoAnchor(){
+ const r=aboutPic.getBoundingClientRect(),T=r.width;
+ return{x:r.left+T*LOGO.eye[0]-SR.left,y:r.top+T*LOGO.eye[1]-SR.top,s:LOGO.eyeR*T/(0.6*ppu),T,l:r.left-SR.left,t:r.top-SR.top};
+}
 // 0: on the shelf (the whole stage still on screen), 1: in the picture (frame a bit below mid-screen)
 function crawlTarget(){
  const B=tileAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55);
@@ -435,25 +445,28 @@ function updateCrawl(dt,now){
  const tg=crawlTarget();
  if(needIntro){ // after the Team curtain the page is below the logo: he is already inside the picture
   if(tg<0.99)return;
-  needIntro=false;introDone=true;cp=1;inLogo=true;inT=-1e9;oct.visible=false;aboutPic.classList.remove('empty');
+  needIntro=false;introDone=true;cp=1;lq=1;inLogo=true;inT=-1e9;oct.visible=false;aboutPic.classList.remove('empty');
  }
  const busy=jobs.length||pull||cjobs.length||curtain||push||!introDone;
  const prev=cp,goal=busy?0:tg;
  cp+=(goal-cp)*Math.min(1,dt*5);if(Math.abs(goal-cp)<0.002)cp=goal;
  crawlV=crawlV*0.85+0.15*Math.abs(cp-prev)/Math.max(dt,1e-3);
- if(!inLogo&&cp>=0.985){inLogo=true;inT=now;aboutPic.classList.remove('empty')}
+ lq=cl01((cp-0.8)/0.18);lq=lq*lq*(3-2*lq);
+ if(!inLogo&&cp>=0.985){inLogo=true;inT=now;aboutPic.classList.remove('empty','merge');void aboutPic.offsetWidth;aboutPic.classList.add('merge')}
  else if(inLogo&&cp<0.95){inLogo=false;aboutPic.classList.add('empty');oct.visible=true}
- if(inLogo&&now-inT>550)oct.visible=false;
+ if(inLogo&&now-inT>950)oct.visible=false;
+ glowB=inLogo?Math.max(0,1-(now-inT)/800):lq*0.35;
  // while crawling he goes over the event cards (at home the cards sit in front of his legs)
  if(!curtain){const z=cp>0.02?'5':'';if(cv.style.zIndex!==z)cv.style.zIndex=z}
  if(prev>0&&cp===0){oct.scale.setScalar(sc);onHome()}
 }
 function crawlPose(now){
- const A=homeAnchor(),B=tileAnchor(),p=cp,k=p*p*(3-2*p),amp=W*0.16;
+ const A=homeAnchor(),B=logoAnchor(),p=cp,k=p*p*(3-2*p),amp=W*0.16;
  const x=A.x+(B.x-A.x)*p+Math.sin(p*Math.PI*2)*amp,y=A.y+(B.y-A.y)*p;
  const dx=(B.x-A.x)+Math.cos(p*Math.PI*2)*Math.PI*2*amp,dy=B.y-A.y;
  const ang=Math.max(-0.8,Math.min(0.8,Math.atan2(dx,Math.abs(dy)+1))),m=Math.sin(Math.PI*p);
- return{x,y:y+Math.sin(now*0.011)*Math.min(1,crawlV*3)*A.s*ppu*0.12,s:A.s+(B.s-A.s)*k,rot:-ang*m*0.35,stand:1,pulse:0};
+ // near the end the wavy path gives way to the exact spot of the drawn eye
+ return{x:x+(B.x-x)*lq,y:y+(B.y-y)*lq+Math.sin(now*0.011)*Math.min(1,crawlV*3)*A.s*ppu*0.12*(1-lq),s:A.s+(B.s-A.s)*k,rot:-ang*m*0.35*(1-lq)+LOGO.lean*lq,stand:1,pulse:0};
 }
 /* ---------- crawling gait: tips grip the page, the body pulls itself along, arms step forward ---------- */
 // Each arm has a foothold in page coordinates (so it stays put on the page while you scroll). When the
@@ -470,6 +483,10 @@ function updateFeet(now,dt,bx,by){
  const s=oct.scale.x,R=3.1*s*ppu;
  if(!feet){
   feet=[...TN].sort((a,b)=>a.d.x-b.d.x).map((tn,i)=>{const f={tn,a:FEET[i],x:tn.tipS.x,y:tn.tipS.y,st:null};tn.job=f;return f});
+  // give each arm the logo curl in the same angular order around the eye, so arms never cross
+  const ang=a=>{let d=a*180/Math.PI;return d<-90?d+360:d};
+  const la=LOGO.tips.map(p=>({p,a:ang(Math.atan2(p[1]-LOGO.eye[1],p[0]-LOGO.eye[0]))})).sort((a,b)=>a.a-b.a);
+  [...feet].sort((a,b)=>ang(a.a)-ang(b.a)).forEach((f,i)=>{f.logo=la[i].p});
   lastBody={x:bx,y:by};bodyV={x:0,y:0};
  }
  const id=Math.max(dt,1e-3),k6=Math.min(1,dt*6);
@@ -480,7 +497,7 @@ function updateFeet(now,dt,bx,by){
  const maxStep=sp>R*4?4:2;
  const cand=feet.filter(f=>!f.st).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
  for(const c of cand){
-  if(stepping>=maxStep||c.e<R*0.45)break;
+  if(lq>0.3||stepping>=maxStep||c.e<R*0.45)break;
   const i=feet.indexOf(c.f);if((feet[i-1]&&feet[i-1].st)||(feet[i+1]&&feet[i+1].st))continue;
   c.f.st={t0:now,dur:Math.max(130,260-sp*0.08),x0:c.f.x,y0:c.f.y};stepping++;
  }
@@ -493,6 +510,11 @@ function updateFeet(now,dt,bx,by){
    const ox=x-bx,oy=y-by,ol=Math.hypot(ox,oy)||1,b=Math.sin(Math.PI*u);
    x+=ox/ol*b*R*0.18;y+=oy/ol*b*R*0.18;z+=b*1.4*s;
    if(u>=1){f.x=x;f.y=y;f.st=null}
+  }
+  if(lq>0){ // reach for the arm curls of the drawing
+   const L=logoAnchor(),gx=L.l+L.T*f.logo[0],gy=L.t+L.T*f.logo[1];
+   x+=(gx-x)*lq;y+=(gy-y)*lq;
+   if(lq>0.5&&!f.st){f.x=gx;f.y=gy}
   }
   tn.tgt.copy(toW(x,y,z));
  }
@@ -536,7 +558,7 @@ function frame(now){
  drift+=(dp-drift)*Math.min(1,dt*2.2);
  const hw=toW(px+drift,py,0);
  oct.position.set(hw.x,hw.y+(stand>=1&&cp===0?Math.sin(tt*1.1)*0.06*sc:0),0);
- oct.rotation.x=0.3*stand;oct.rotation.z=rot-drift/ppu*0.04;
+ oct.rotation.x=0.3*stand*(1-lq);oct.rotation.z=rot-drift/ppu*0.04;
  mg.rotation.z=Math.sin(tt*0.9)*0.03;
  oct.updateMatrixWorld(true);
  updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);updateFeet(now,dt,px+drift,py);
@@ -555,7 +577,7 @@ function frame(now){
   writeTN(tn);
  }
  parts.forEach(q=>q.im.instanceMatrix.needsUpdate=true);tipI.instanceMatrix.needsUpdate=tipLed.instanceMatrix.needsUpdate=true;
- brain.rotation.y=tt*.8;{const pu=.75+.25*Math.sin(tt*2.4);brainGlow.material.opacity=.6+.35*pu;eyeGlow.material.opacity=.45+.3*pu}
+ brain.rotation.y=tt*.8;{const pu=.75+.25*Math.sin(tt*2.4);brainGlow.material.opacity=.6+.35*pu;eyeGlow.material.opacity=.45+.3*pu+glowB;eyeGlow.scale.setScalar(1.9*(1+glowB*1.4));brainGlow.material.opacity+=glowB*0.5}
  R.render(scene,cam);
 }
 try{GL=initGL()}catch(err){console.error(err);GL=false}
