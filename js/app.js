@@ -460,7 +460,8 @@ function crawlTarget(){
  const s1b=s1+SVH*0.3,s2=Math.max(s1b+200,perch().gy-SVH*0.55); // he rests in the logo for a while first
  if(y<=s2||!dock||dock.hidden)return y<=s1b?1:1+cl01((y-s1b)/(s2-s1b));
  // 2..3: plugged into the team for a while, then carries the free-spot card down into the join form
- const s2b=s2+SVH*0.25,d=dock.getBoundingClientRect(),s3=Math.max(s2b+200,d.top-SR.top+d.height/2-SVH*0.5);
+ // stays with the team until the end of the list is past the middle of the screen (long lists on phones)
+ const s2b=Math.max(s2+SVH*0.25,teamList.getBoundingClientRect().bottom-SR.top-SVH*0.6),d=dock.getBoundingClientRect(),s3=Math.max(s2b+200,d.top-SR.top+d.height/2-SVH*0.5);
  return y<=s2b?2:2+cl01((y-s2b)/(s3-s2b));
 }
 /* ---------- About -> Team: he climbs out of the logo, crawls to the team and plugs an arm into each member ---------- */
@@ -469,8 +470,9 @@ const teamList=document.getElementById('teamList');
 const teamH=document.querySelector('#team h2');
 function perch(){
  const g=teamList.getBoundingClientRect(),h=teamH.getBoundingClientRect(),l=g.left-SR.left,t=g.top-SR.top,hy=h.top+h.height/2-SR.top;
- return W<700?{x:l+g.width-48,y:hy,s:sc*0.8,gy:t+g.height*0.5}
-             :{x:l+g.width*0.62,y:hy+10,s:sc*0.7,gy:t+g.height*0.5};
+ // phones: the list is taller than the screen, so he rides along the right edge in the middle of the screen
+ if(W<700){const vy=-SR.top+stableVH()*0.55;return{x:W-20,y:Math.max(t+50,Math.min(t+g.height-50,vy)),s:sc*0.6,gy:t+Math.min(g.height*0.5,160)}}
+ return{x:l+g.width*0.62,y:hy+10,s:sc*0.7,gy:t+g.height*0.5};
 }
 // The cable an arm lays to a member's avatar, kept off the text: from the body down to the gap above the
 // first row of cards (via the right margin on phones), along that gap, down the left margin for lower
@@ -480,7 +482,8 @@ function cableRoute(i,r0){
  const g=teamList.getBoundingClientRect(),gl=g.left-SR.left-8,gr=g.right-SR.left+7,cr=c.getBoundingClientRect();
  const y0=cards[0].getBoundingClientRect().top-SR.top-12,ct=cr.top-SR.top,row0=ct<=y0+20,o=(i%3)*3;
  let pts;
- if(W<700)pts=[[r0.x,r0.y],[gr-o,r0.y+14],[gr-o,y0-o],[gl+o,y0-o],[gl+o,a.y],[a.x,a.y]];
+ // phones: down/up the right margin to the gap above that card, across the gap, down the left margin
+ if(W<700){const gy=(row0?y0:ct-8)-o;pts=[[r0.x,r0.y],[gr-o,r0.y],[gr-o,gy],[gl+o,gy],[gl+o,a.y],[a.x,a.y]]}
  else if(row0)pts=[[r0.x,r0.y],[r0.x,y0-o],[a.x,y0-o],[a.x,a.y]];
  else pts=[[r0.x,r0.y],[r0.x,y0-o],[gl+o,y0-o],[gl+o,ct-8],[a.x,ct-8],[a.x,a.y]];
  for(let k=0;k<3;k++){const q=[pts[0]];for(let j=0;j<pts.length-1;j++){const A=pts[j],B=pts[j+1];
