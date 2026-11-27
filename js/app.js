@@ -203,7 +203,7 @@ function writeTN(tn){
 
 /* ---------- jobs: pull the button, deal, sort ---------- */
 let cjobs=[],collectAfter=null,curtain=null,curtainEl=null,needIntro=false,lift=0,liftT=0,poseT=0;
-let jobs=[],pull=null,backT=null,pending=null,introS=null,introDone=false,rotEnd=0;
+let teamQ=false,jobs=[],pull=null,backT=null,pending=null,introS=null,introDone=false,rotEnd=0;
 const ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
 const outBack=u=>{const c=1.6,v=u-1;return 1+(c+1)*v*v*v+c*v*v};
 const cl01=u=>Math.max(0,Math.min(1,u));
@@ -410,7 +410,7 @@ function endCurtain(){
  curtainEl.style.display='none';cv.style.zIndex='';
  curtain.grips.forEach(g=>g[0].job=null);curtain=null;needIntro=true;oct.visible=false;oct.scale.setScalar(sc);
 }
-function onIntroDone(){introDone=true;if(!dealt)navEv.classList.add('pulse');if(pending){const p=pending;pending=null;startPull(p)}}
+function onIntroDone(){introDone=true;if(teamQ){teamQ=false;pending=null;runTeam();return}if(!dealt)navEv.classList.add('pulse');if(pending){const p=pending;pending=null;startPull(p)}}
 
 let last=performance.now(),tt=0,vis=true;
 function frame(now){
@@ -531,10 +531,20 @@ navEv.addEventListener('click',e=>{e.preventDefault();
  if(window.scrollY>40){window.scrollTo({top:0,behavior:RM?'auto':'smooth'});setTimeout(()=>startPull(navEv),650)}else startPull(navEv)});
 document.querySelector('.brand').addEventListener('click',e=>{e.preventDefault();window.scrollTo({top:0,behavior:RM?'auto':'smooth'})});
 const navTeam=document.querySelector('.links a[href="#team"]');
-navTeam.addEventListener('click',e=>{
- if(!GL||RM||window.scrollY>40||!introDone||curtain||pull||cjobs.length)return;
- e.preventDefault();if(jobs.length||push)skip();
+// Team: the octopus pulls the Team button and closes the curtain. If the page is scrolled a bit
+// (short screens, phones) it first scrolls back up to the octopus; during its entrance it waits for it.
+function runTeam(){
+ if(curtain||(pull&&pull.after))return;
+ if(!introDone){teamQ=true;return}
+ if(jobs.length||push||pull||cjobs.length)skip();
  startPull(navTeam,()=>startCurtain());
+}
+navTeam.addEventListener('click',e=>{
+ if(!GL||RM||window.scrollY>stage.offsetHeight*0.6)return; // already down by the team: plain jump
+ e.preventDefault();
+ if(curtain||(pull&&pull.after)||teamQ)return;
+ if(window.scrollY>4){teamQ=true;window.scrollTo({top:0,behavior:'smooth'});setTimeout(()=>{teamQ=false;runTeam()},700);return}
+ runTeam();
 });
 const tryRelease=e=>{if(!curtain)return;e.preventDefault();if(curtain.st===3){curtain.h0=curtain.hem;curtain.bb=curtain.base;curtain.st=4;curtain.ts=performance.now()}};
 addEventListener('wheel',tryRelease,{passive:false});addEventListener('touchmove',tryRelease,{passive:false});
