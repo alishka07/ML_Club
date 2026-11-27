@@ -66,12 +66,28 @@ window.CLUB = {
       d: {en: 'Keeps this site and the compute running.', ru: 'Следит, чтобы сайт и сервера работали.'}}
   ],
 
-  // Чекбоксы «How you want to help» в форме Join the team
-  help: [
-    {en: 'Run events', ru: 'Проводить события'}, {en: 'Mentor others', ru: 'Менторить'},
-    {en: 'Build datasets', ru: 'Собирать датасеты'}, {en: 'Design and media', ru: 'Дизайн и медиа'},
-    {en: 'Website and dev', ru: 'Сайт и разработка'}, {en: 'Partnerships', ru: 'Партнёрства'}
-  ],
+  // Анкета вступления. Ответы с сайта уходят прямо в Google-форму клуба «ML&DS society join application»
+  // (в ту же таблицу, что и ответы из самой формы). entries — номера полей формы (entry.…);
+  // если вопросы в Google-форме поменяются, их нужно обновить здесь. Значения вариантов (v) должны
+  // совпадать с вариантами в Google-форме буква в букву; подписи (label) — то, что видно на сайте.
+  joinForm: {
+    action: 'https://docs.google.com/forms/d/e/1FAIpQLScT3kBgZCNMriNxWR1H26Qy2WIiVhkyTq6rVPbBhBOuucWBsw/formResponse',
+    link: 'https://docs.google.com/forms/d/e/1FAIpQLScT3kBgZCNMriNxWR1H26Qy2WIiVhkyTq6rVPbBhBOuucWBsw/viewform',
+    entries: {first: 'entry.1511118693', last: 'entry.157977244', studentId: 'entry.797543703',
+      major: 'entry.272475857', year: 'entry.608225428', telegram: 'entry.2133093788',
+      skills: 'entry.1863939385', motivation: 'entry.1961095562', confirm: 'entry.948103818'},
+    majors: [
+      {v: 'Computer Science', label: 'Computer Science'},
+      {v: 'Civil Engineering', label: 'Civil Engineering'},
+      {v: 'Explorational Geology', label: 'Explorational Geology'},
+      {v: 'Business & Management', label: 'Business & Management'}
+    ],
+    years: [
+      {v: 'Foundational year', label: {en: 'Foundational year', ru: 'Foundation (подготовительный год)'}},
+      {v: 'First year', label: {en: 'First year', ru: '1 курс'}}
+    ],
+    confirm: 'Yes'
+  },
 
   // Роли по умолчанию для студенческих проектов без своего списка roles
   roles: ['CV', 'NLP', {en: 'Data', ru: 'Данные'}, 'Frontend', 'Backend']

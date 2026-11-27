@@ -182,3 +182,8 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .pastmark{display:inline-block;font-size:13px;font-weight:600;color:var(--mut);border:1px dashed var(--line);border-radius:999px;padding:3px 10px}
 .pastnote{color:var(--mut);margin-top:6px}
 dialog .dimg{display:block;width:100%;max-height:300px;object-fit:contain;background:var(--bg);border-radius:16px;margin:0 0 14px}
+/* join form: the confirmation tick */
+label.confirm{display:flex;gap:10px;align-items:flex-start;font-weight:500;color:var(--mut);margin-top:16px}
+label.confirm input{width:18px;min-height:0;margin-top:3px;flex:none;accent-color:var(--acc)}
+.checks input[type=radio]{width:18px;min-height:0;accent-color:var(--acc)}
+#jok a{color:var(--acc2)}

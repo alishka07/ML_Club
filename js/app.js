@@ -10,6 +10,11 @@ let LANG=(()=>{try{const s=localStorage.getItem('cuml-lang');if(s&&I[s])return s
 const i18=(k,v)=>{let s=(I[LANG]&&I[LANG][k])??I.en[k]??k;if(v)for(const x in v)s=s.split('{'+x+'}').join(v[x]);return s};
 const txt=v=>v&&typeof v==='object'?(v[LANG]??v.en??''):(v??'');
 const typeName=ty=>I.en['type.'+ty]?i18('type.'+ty):'';
+// answers of the join form
+const JF=CLUB.joinForm||{entries:{},majors:[],years:[]};
+const fval=id=>{const x=document.getElementById(id);return x?x.value.trim():''};
+const fradio=n=>{const x=document.querySelector(`#jform input[name="${n}"]:checked`);return x?x.value:''};
+const optLabel=(list,v)=>{const o=list.find(x=>x.v===v);return o?txt(o.label):v};
 const SAMPLE=CLUB.events;
 const ROLES=CLUB.roles;
 
@@ -928,10 +933,11 @@ renderTeam();
 function ghostHTML(){return `<div class="member ${S.join?'joined':'ghost'}" id="ghost"><div class="av" id="gAv">?</div><div><b id="gName"></b><span id="gRole"></span></div><p id="gDesc"></p></div>`}
 function updateGhost(){
  const g=document.getElementById('ghost');if(!g)return;
- const joined=g.classList.contains('joined'),typed=(($('#jn')||{}).value||'').trim();
- const n=joined?S.join.name:typed,roles=joined?(S.join.help||[]):[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value);
+ const joined=g.classList.contains('joined'),typed=(fval('jf')+' '+fval('jln')).trim();
+ const n=joined?S.join.name:typed,major=joined?S.join.major:fradio('major'),year=joined?S.join.year:fradio('year');
+ const role=[major&&optLabel(JF.majors,major),year&&optLabel(JF.years,year)].filter(Boolean).join(' · ');
  $('#gAv').textContent=n?n.charAt(0).toUpperCase():'?';$('#gName').textContent=n||i18('ghost.name');
- $('#gRole').textContent=roles.length?roles.join(', '):i18('ghost.role');
+ $('#gRole').textContent=role||i18('ghost.role');
  $('#gDesc').textContent=joined||joining?i18('ghost.welcome'):i18(n?'ghost.candidate':'ghost.desc');
  g.classList.toggle('filled',!!n);
  const ds=dock&&dock.querySelector('span');if(ds)ds.textContent=i18(joined?'dock.joined':'dock.label');
@@ -941,20 +947,38 @@ function updateGhost(){
 function sizeDock(){const g=document.getElementById('ghost');if(!dock||!g||dock.hidden||g.classList.contains('docked'))return;
  const w0=g.style.width;g.style.width=dock.clientWidth+'px';const h=g.offsetHeight;g.style.width=w0;dock.style.height=h+'px'}
 /* ---------- join ---------- */
-const HELP=CLUB.help;
-const renderHelp=()=>{const on=[...document.querySelectorAll('#jroles input')].map(x=>x.checked);
- $('#jroles').innerHTML=HELP.map((r,i)=>`<label><input type="checkbox" value="${esc(txt(r))}"${on[i]?' checked':''}>${esc(txt(r))}</label>`).join('')};
+// majors and years as radio chips (values exactly as in the Google Form, labels in the site's language)
+const renderHelp=()=>{
+ const keep=n=>fradio(n),chips=(n,list,cur)=>list.map((o,i)=>`<label><input type="radio" name="${n}" value="${esc(o.v)}"${i===0?' required':''}${o.v===cur?' checked':''}>${esc(txt(o.label))}</label>`).join('');
+ const m=keep('major'),y=keep('year');
+ $('#jmajor').innerHTML=chips('major',JF.majors,m);$('#jyear').innerHTML=chips('year',JF.years,y);
+};
 renderHelp();
-$('#jform').addEventListener('submit',e=>{
- e.preventDefault();const n=$('#jn').value.trim();if(!n)return;
- S.join={name:n,email:$('#je').value.trim(),year:$('#jy').value,level:$('#jl').value,help:[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value),note:$('#jm').value.trim()};save();
- const g=document.getElementById('ghost'),first=g&&!g.classList.contains('joined');
- if(first){ // freeze the card with what was typed, then send it up to the team
-  $('#gName').textContent=n;$('#gAv').textContent=n.charAt(0).toUpperCase();
-  $('#gRole').textContent=S.join.help.length?S.join.help.join(', '):i18('ghost.role');$('#gDesc').textContent=i18('ghost.welcome');
+// Sending: the answers are posted straight to the club's Google Form (its responses table). The browser
+// can't read Google's reply (no-cors), so only a network failure counts as an error.
+$('#jform').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const form=e.target,btn=form.querySelector('button[type=submit]');
+ let tg=fval('jtg');if(tg&&tg[0]!=='@')tg='@'+tg;
+ const A={first:fval('jf'),last:fval('jln'),studentId:fval('jsid'),major:fradio('major'),year:fradio('year'),telegram:tg,skills:fval('jsk'),motivation:fval('jmo')};
+ const n=(A.first+' '+A.last).trim();if(!A.first)return;
+ if(JF.action){
+  const body=new URLSearchParams();
+  for(const k in JF.entries){const v=k==='confirm'?JF.confirm||'Yes':A[k];if(v)body.append(JF.entries[k],v)}
+  btn.disabled=true;$('#jok').textContent=i18('join.sending');
+  try{await fetch(JF.action,{method:'POST',mode:'no-cors',body})}
+  catch(err){btn.disabled=false;$('#jok').innerHTML=`${esc(i18('join.fail'))} <a href="${esc(JF.link)}" target="_blank" rel="noopener">Google Form</a>.`;return}
+  btn.disabled=false;
  }
- e.target.reset();$('#jok').textContent=i18('join.ok',{n});
- if(first)startJoin();else updateGhost();
+ // only what the card needs stays in this browser (no student ID)
+ S.join={name:n,major:A.major,year:A.year,telegram:tg};save();
+ const g=document.getElementById('ghost'),isFirst=g&&!g.classList.contains('joined');
+ if(isFirst){ // freeze the card with what was typed, then send it up to the team
+  $('#gName').textContent=n;$('#gAv').textContent=n.charAt(0).toUpperCase();
+  $('#gRole').textContent=[optLabel(JF.majors,A.major),optLabel(JF.years,A.year)].filter(Boolean).join(' · ')||i18('ghost.role');$('#gDesc').textContent=i18('ghost.welcome');
+ }
+ form.reset();$('#jok').textContent=i18('join.ok',{n:A.first});
+ if(isFirst)startJoin();else updateGhost();
 });
 $('#jform').addEventListener('input',()=>{if(!joining)updateGhost()});$('#jform').addEventListener('change',()=>{if(!joining)updateGhost()});
 addEventListener('resize',sizeDock);
@@ -966,6 +990,7 @@ function applyStatic(){
  document.querySelectorAll('[data-i18n-html]').forEach(x=>{x.innerHTML=i18(x.dataset.i18nHtml)});
  document.querySelectorAll('[data-i18n-aria]').forEach(x=>x.setAttribute('aria-label',i18(x.dataset.i18nAria)));
  document.querySelectorAll('[data-i18n-alt]').forEach(x=>x.setAttribute('alt',i18(x.dataset.i18nAlt)));
+ document.querySelectorAll('[data-i18n-title]').forEach(x=>x.setAttribute('title',i18(x.dataset.i18nTitle)));
  document.querySelectorAll('[data-i18n-ph]').forEach(x=>x.setAttribute('placeholder',i18(x.dataset.i18nPh)));
 }
 function setLang(l){

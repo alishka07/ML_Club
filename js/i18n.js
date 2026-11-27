@@ -42,15 +42,20 @@ window.I18N = {
     'team.note': 'Sample names and roles. Swap in your real team.',
     'join.title': 'Join the team',
     'join.lead': 'Help run hackathons, mentor newcomers, build datasets or design the next poster. No experience needed, just time and curiosity.',
-    'join.s1': 'Tell us what you want to do.', 'join.s2': 'Come to the next meetup and meet the team.',
+    'join.s1': 'Fill in the application below.', 'join.s2': 'Come to the next meetup and meet the team.',
     'join.s3': 'Take one small task for the next event.',
-    'join.name': 'Name', 'join.email': 'University email', 'join.year': 'Year', 'join.level': 'ML level',
+    'join.first': 'First name', 'join.last': 'Last name', 'join.sid': 'Student ID', 'join.tg': 'Telegram username',
+    'join.tgHint': 'Your Telegram username, e.g. @username', 'join.major': 'Major', 'join.yearq': 'Year of study',
+    'join.skills': 'What skills do you have?', 'join.skillsPh': 'Math, programming languages, libraries, frameworks',
+    'join.motivation': 'What is your motivation for joining the club?',
+    'join.confirm': 'By submitting this form, I confirm that I am joining this club.',
+    'join.sending': 'Sending…', 'join.fail': 'Could not send the application. Check your connection and try again, or fill in the',
     'year.f': 'Foundation', 'year.1': 'Year 1', 'year.2': 'Year 2', 'year.3': 'Year 3', 'year.m': "Master's",
     'join.help': 'How you want to help', 'join.more': 'Anything else',
     'join.morePh': 'Skills, ideas for events, links to your projects', 'join.submit': 'Join the team',
-    'join.ok': 'Got it, {n}. In this prototype your application is saved in this browser only.',
+    'join.ok': 'Thanks, {n}! Your application has been sent to the club.',
     'foot.place': 'CU ML Club, Cardiff University Kazakhstan, Astana',
-    'foot.note': 'Prototype. Team names are sample data. Forms are saved only in this browser.'
+    'foot.note': 'Prototype. Team names are sample data. Join applications go to the club’s Google Form.'
   },
   ru: {
     'lang.switch': 'EN', 'lang.switchLabel': 'English version',
@@ -90,14 +95,19 @@ window.I18N = {
     'team.note': 'Имена и роли — примеры. Замените на настоящую команду.',
     'join.title': 'Вступить в команду',
     'join.lead': 'Помогайте проводить хакатоны, менторить новичков, собирать датасеты или рисовать следующий постер. Опыт не нужен — только время и любопытство.',
-    'join.s1': 'Расскажите, чем хотите заниматься.', 'join.s2': 'Приходите на ближайшую встречу и познакомьтесь с командой.',
+    'join.s1': 'Заполните анкету ниже.', 'join.s2': 'Приходите на ближайшую встречу и познакомьтесь с командой.',
     'join.s3': 'Возьмите одну небольшую задачу к следующему событию.',
-    'join.name': 'Имя', 'join.email': 'Университетская почта', 'join.year': 'Курс', 'join.level': 'Уровень в ML',
+    'join.first': 'Имя', 'join.last': 'Фамилия', 'join.sid': 'Student ID', 'join.tg': 'Telegram (username)',
+    'join.tgHint': 'Ваш username в Telegram, например @username', 'join.major': 'Специальность', 'join.yearq': 'Курс',
+    'join.skills': 'Какие у вас навыки?', 'join.skillsPh': 'Математика, языки программирования, библиотеки, фреймворки',
+    'join.motivation': 'Какая у вас мотивация вступить в клуб?',
+    'join.confirm': 'Отправляя анкету, я подтверждаю, что вступаю в клуб.',
+    'join.sending': 'Отправляем…', 'join.fail': 'Не удалось отправить анкету. Проверьте интернет и попробуйте ещё раз или заполните',
     'year.f': 'Foundation', 'year.1': '1 курс', 'year.2': '2 курс', 'year.3': '3 курс', 'year.m': 'Магистратура',
     'join.help': 'Чем хотите помогать', 'join.more': 'Что-нибудь ещё',
     'join.morePh': 'Навыки, идеи для событий, ссылки на ваши проекты', 'join.submit': 'Вступить',
-    'join.ok': 'Принято, {n}. В этом прототипе заявка сохраняется только в вашем браузере.',
+    'join.ok': 'Спасибо, {n}! Анкета отправлена в клуб.',
     'foot.place': 'CU ML Club, Cardiff University Kazakhstan, Астана',
-    'foot.note': 'Прототип. Имена в команде — примеры. Формы сохраняются только в этом браузере.'
+    'foot.note': 'Прототип. Имена в команде — примеры. Анкеты уходят в Google-форму клуба.'
   }
 };
