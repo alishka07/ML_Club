@@ -453,7 +453,49 @@ function crawlPose(now){
  const x=A.x+(B.x-A.x)*p+Math.sin(p*Math.PI*2)*amp,y=A.y+(B.y-A.y)*p;
  const dx=(B.x-A.x)+Math.cos(p*Math.PI*2)*Math.PI*2*amp,dy=B.y-A.y;
  const ang=Math.max(-0.8,Math.min(0.8,Math.atan2(dx,Math.abs(dy)+1))),m=Math.sin(Math.PI*p);
- return{x,y,s:A.s+(B.s-A.s)*k,rot:-ang*m*0.8,stand:1-0.75*m,pulse:Math.min(1,crawlV*4)*Math.max(0,Math.sin(now*0.013))};
+ return{x,y:y+Math.sin(now*0.011)*Math.min(1,crawlV*3)*A.s*ppu*0.12,s:A.s+(B.s-A.s)*k,rot:-ang*m*0.35,stand:1,pulse:0};
+}
+/* ---------- crawling gait: tips grip the page, the body pulls itself along, arms step forward ---------- */
+// Each arm has a foothold in page coordinates (so it stays put on the page while you scroll). When the
+// body has moved on and a foothold is too far from where that arm should be, the arm lets go and reaches
+// forward along the direction of travel. Neighbouring arms never step together; faster crawling means
+// more and quicker steps. Standing still, he just holds on with all eight.
+const FEET=[185,150,220,115,65,-40,30,-5].map(a=>a*Math.PI/180);
+let feet=null,lastBody=null,bodyV={x:0,y:0};
+function updateFeet(now,dt,bx,by){
+ if(!(cp>0.02)||curtain||!oct.visible&&!inLogo){
+  if(feet){feet.forEach(f=>{if(f.tn.job===f)f.tn.job=null});feet=null}
+  return;
+ }
+ const s=oct.scale.x,R=3.1*s*ppu;
+ if(!feet){
+  feet=[...TN].sort((a,b)=>a.d.x-b.d.x).map((tn,i)=>{const f={tn,a:FEET[i],x:tn.tipS.x,y:tn.tipS.y,st:null};tn.job=f;return f});
+  lastBody={x:bx,y:by};bodyV={x:0,y:0};
+ }
+ const id=Math.max(dt,1e-3),k6=Math.min(1,dt*6);
+ bodyV.x+=((bx-lastBody.x)/id-bodyV.x)*k6;bodyV.y+=((by-lastBody.y)/id-bodyV.y)*k6;lastBody={x:bx,y:by};
+ const sp=Math.hypot(bodyV.x,bodyV.y),dx=sp>2?bodyV.x/sp:0,dy=sp>2?bodyV.y/sp:0,lead=Math.min(1,sp/(R*3))*R*0.55;
+ const ideal=f=>({x:bx+Math.cos(f.a)*R+dx*lead,y:by+Math.sin(f.a)*R*0.85+dy*lead});
+ let stepping=feet.filter(f=>f.st).length;
+ const maxStep=sp>R*4?4:2;
+ const cand=feet.filter(f=>!f.st).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
+ for(const c of cand){
+  if(stepping>=maxStep||c.e<R*0.45)break;
+  const i=feet.indexOf(c.f);if((feet[i-1]&&feet[i-1].st)||(feet[i+1]&&feet[i+1].st))continue;
+  c.f.st={t0:now,dur:Math.max(130,260-sp*0.08),x0:c.f.x,y0:c.f.y};stepping++;
+ }
+ for(const f of feet){
+  const tn=f.tn;tn.w=Math.min(1,tn.w+dt*4);
+  let x=f.x,y=f.y,z=0.35*s;
+  if(f.st){ // lift, swing forward in a small arc, plant a bit ahead
+   const u=cl01((now-f.st.t0)/f.st.dur),k=ease(u),g=ideal(f);
+   x=f.st.x0+(g.x+dx*R*0.25-f.st.x0)*k;y=f.st.y0+(g.y+dy*R*0.25-f.st.y0)*k;
+   const ox=x-bx,oy=y-by,ol=Math.hypot(ox,oy)||1,b=Math.sin(Math.PI*u);
+   x+=ox/ol*b*R*0.18;y+=oy/ol*b*R*0.18;z+=b*1.4*s;
+   if(u>=1){f.x=x;f.y=y;f.st=null}
+  }
+  tn.tgt.copy(toW(x,y,z));
+ }
 }
 function onHome(){if(teamQ){teamQ=false;pending=null;runTeam();return}if(pending){const p=pending;pending=null;startPull(p)}}
 function onIntroDone(){introDone=true;if(teamQ){teamQ=false;pending=null;runTeam();return}if(!dealt)navEv.classList.add('pulse');if(pending){const p=pending;pending=null;startPull(p)}}
@@ -497,7 +539,7 @@ function frame(now){
  oct.rotation.x=0.3*stand;oct.rotation.z=rot-drift/ppu*0.04;
  mg.rotation.z=Math.sin(tt*0.9)*0.03;
  oct.updateMatrixWorld(true);
- updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);
+ updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);updateFeet(now,dt,px+drift,py);
  for(const tn of TN){
   poseStand(tn,poseT);
   if(stand<1){poseSwim(tn,tt,pulse);for(let j=0;j<=N;j++)tn.fk[j].lerpVectors(tn.fkW[j],tn.fkS[j],stand)}
