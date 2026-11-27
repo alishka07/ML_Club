@@ -294,8 +294,8 @@ function updateJobs(now){
  if(jobs.length&&done===jobs.length){jobs=[];showSkip();bar2.classList.add('on');liftT=1;backT=setTimeout(()=>track.scrollTo({left:0,behavior:'smooth'}),500)}
 }
 /* ---------- Team: collect the cards back, pull Team, close the scene ---------- */
-function collect(after){
- const cards=[...track.querySelectorAll('.card:not(.wait)')];
+function collect(after,only){
+ const cards=only||[...track.querySelectorAll('.card:not(.wait)')];
  bar2.classList.remove('on');liftT=0;
  if(!cards.length){after();return}
  collectAfter=after;track.scrollTo({left:0});
@@ -437,8 +437,10 @@ if(!GL||RM){
 }
 
 /* ---------- events UI ---------- */
-// Filters only hide the cards that don't match and slide the rest together (no octopus re-deal).
-// Tapping the active filter again, or All, brings every card back. Shuffle again still re-deals.
+// Filters: the octopus carries the cards that don't match back into the Events button and the rest
+// slide together; cards that come back are pulled out of Events and put on the shelf.
+// Tapping the active filter again, or All, brings every card back. Without WebGL or with reduced
+// motion the cards just fade out and in.
 let fseq=0;
 function applyFilter(f){
  if(pull||cjobs.length||curtain)return;
@@ -449,6 +451,19 @@ function applyFilter(f){
  const seq=++fseq,anim=!RM&&typeof Element.prototype.animate==='function';
  const keep=new Set(list().map(e=>e.id));
  const out=[...track.querySelectorAll('.card')].filter(c=>!keep.has(c.dataset.id));
+ if(GL&&!RM&&introDone&&dealt){
+  const back=()=>{
+   const first=new Map([...track.querySelectorAll('.card')].filter(c=>keep.has(c.dataset.id)).map(c=>[c.dataset.id,c.getBoundingClientRect()]));
+   const cs=render();track.scrollLeft=0;
+   const fresh=cs.filter(c=>!first.has(c.dataset.id));
+   fresh.forEach(c=>c.classList.add('wait'));
+   cs.forEach(c=>{const a=first.get(c.dataset.id);if(!a)return;const b=c.getBoundingClientRect(),dx=a.left-b.left;
+    if(dx)c.animate([{transform:`translateX(${dx}px)`},{transform:'none'}],{duration:420,easing:'cubic-bezier(.2,.8,.2,1)'})});
+   if(fresh.length)runSort(fresh,420,rel(navEv));else{bar2.classList.add('on');liftT=1}
+  };
+  if(out.length)collect(back,out);else back();
+  return;
+ }
  const relayout=()=>{
   if(seq!==fseq)return;
   const first=new Map([...track.querySelectorAll('.card')].filter(c=>keep.has(c.dataset.id)).map(c=>[c.dataset.id,c.getBoundingClientRect()]));
