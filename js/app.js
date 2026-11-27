@@ -39,7 +39,7 @@ function render(){const L=list();track.innerHTML=L.length?L.map(cardHTML).join('
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const chips=$('#chips'),shint=$('#shint'),bar2=$('#bar2'),navEv=$('#navEv'),navEl=document.querySelector('nav.top');
 const N=16,K=.42;
-let GL=false,R,scene,cam,oct,mg,parts=[],tipI,tipLed,brain,brainGlow,eyeGlow,W=1,H=1,OH=1,ppu=1,sc=1,home=null,homeS={x:0,y:0},drift=0,SR=null,dealt=false;
+let GL=false,R,scene,cam,oct,mg,parts=[],tipI,tipLed,brain,brainGlow,eyeGlow,W=1,H=1,VW=1,VH=1,OH=1,ppu=1,sc=1,home=null,homeS={x:0,y:0},drift=0,SR=null,dealt=false;
 const TN=[];
 let V,B,P,T2,W3,UPV,Pp,Zv,Mid,SM,WM,Q,S3;
 function envMap(){
@@ -144,8 +144,10 @@ function initGL(){
  }
  return true;
 }
-function toS(v){P.copy(v).project(cam);return{x:(P.x+1)/2*W,y:(1-P.y)/2*H}}
-function toW(x,y,z){P.set(x/W*2-1,-(y/H)*2+1,0.5).unproject(cam);P.sub(cam.position).normalize();const t=(z-cam.position.z)/P.z;return new THREE.Vector3().copy(cam.position).addScaledVector(P,t)}
+// The canvas covers the whole window (so the octopus can leave the stage); all logic works in
+// stage-local pixels and these two convert using the stage's current position (SR).
+function toS(v){P.copy(v).project(cam);return{x:(P.x+1)/2*VW-SR.left,y:(1-P.y)/2*VH-SR.top}}
+function toW(x,y,z){x+=SR.left;y+=SR.top;P.set(x/VW*2-1,-(y/VH)*2+1,0.5).unproject(cam);P.sub(cam.position).normalize();const t=(z-cam.position.z)/P.z;return new THREE.Vector3().copy(cam.position).addScaledVector(P,t)}
 const ZP=()=>1.4*sc;
 function layout(){
  if(!GL)return;
@@ -154,9 +156,9 @@ function layout(){
  // phones: the nav, filter bar and shelf leave almost no height, so let the stage grow
  // until the octopus can span the screen width (its height is about half its arm span)
  const sw=stage.clientWidth;oarea.style.minHeight=sw<700?Math.round(top+sw*0.505)+'px':'';
- W=stage.clientWidth;H=stage.clientHeight;OH=oarea.offsetHeight;
- R.setSize(W,H,false);cam.aspect=W/H;cam.updateProjectionMatrix();cam.updateMatrixWorld();
- ppu=H/(2*16*Math.tan(15*Math.PI/180));
+ W=stage.clientWidth;H=stage.clientHeight;OH=oarea.offsetHeight;VW=innerWidth;VH=innerHeight;SR=stage.getBoundingClientRect();
+ R.setSize(VW,VH);cam.aspect=VW/VH;cam.updateProjectionMatrix();cam.updateMatrixWorld();
+ ppu=VH/(2*16*Math.tan(15*Math.PI/180));
  sc=Math.min((OH-top)*0.93/(5.2*ppu),W*0.94/(10.4*ppu));oct.scale.setScalar(sc);
  homeS={x:W/2,y:top+3.1*sc*ppu};home=toW(homeS.x,homeS.y,0);
 }
@@ -227,6 +229,7 @@ function startPull(chip,after){
  const f=chip.dataset.f;
  if(!GL||RM){if(after)after(null);else deal(f);return}
  if(!introDone){if(!after)pending=chip;return}
+ if(dv){if(after)teamQ=true;else pending=chip;return}
  if(pull||curtain||cjobs.length)return;
  skip();clearTimeout(backT);
  const c=rel(chip),tn=pickTN(c.x);if(!tn){if(after)after(null);else deal(f);return}
@@ -266,7 +269,7 @@ function updatePull(now){
    const chip=pull.chip,o={x:c.x+dx,y:c.y+dy};
    chip.style.transition='transform .5s cubic-bezier(.3,1.7,.5,1)';chip.style.transform='';
    setTimeout(()=>{chip.style.transition=''},520);
-   const af=pull.after;tn.job=null;pull=null;
+   const af=pull.after;tn.job=null;pull=null;showSkip();
    if(af)af(o);else runSort(deal(chip.dataset.f),420,o);
   }
  }
@@ -410,19 +413,79 @@ function endCurtain(){
  curtainEl.style.display='none';cv.style.zIndex='';
  curtain.grips.forEach(g=>g[0].job=null);curtain=null;needIntro=true;oct.visible=false;oct.scale.setScalar(sc);
 }
+/* ---------- the octopus dives into the logo picture and climbs back out ---------- */
+// Scroll to the About block: he swims to the empty frame, shrinks to its size and dives in; the drawn
+// logo appears in his place. Scroll back up to the events: the logo fades, he climbs out and swims home.
+const aboutPic=document.getElementById('aboutPic');
+let dv=null,blank=false;
+function tileAnchor(){
+ const r=aboutPic.getBoundingClientRect(),T=r.width,s=T*0.8/(10.4*ppu);
+ return{x:r.left+T/2-SR.left,y:r.top+(T-5.2*s*ppu)/2+3.1*s*ppu-SR.top,s};
+}
+const homeAnchor=()=>({x:homeS.x,y:homeS.y-lift*OH*0.07,s:sc});
+function checkDive(now){
+ if(!aboutPic||!GL||RM)return;
+ const r=aboutPic.getBoundingClientRect(),mid=r.top+r.height/2,stB=SR.bottom;
+ if(!dv){
+  if(needIntro&&mid>VH*0.1&&mid<VH*0.9&&stB<VH*0.35){ // back from the Team curtain: he is already in the picture
+   needIntro=false;introDone=true;oct.visible=false;dv={st:'in'};aboutPic.classList.remove('empty');return}
+  if(introDone&&!needIntro&&oct.visible&&!jobs.length&&!pull&&!cjobs.length&&!curtain&&!push&&!teamQ&&!pending&&
+     mid>VH*0.2&&mid<VH*0.8&&stB<VH*0.35){
+   clearTimeout(backT);dv={st:'to',ts:now,a:{x:homeS.x+drift,y:homeS.y-lift*OH*0.07,s:sc}};
+  }
+ }else if(dv.st==='in'&&stB>VH*0.55){
+  // picture still on screen: hop out of the frame; already scrolled away: just swim home
+  oct.visible=true;aboutPic.classList.add('empty');dv={st:r.bottom>0&&r.top<VH?'exit':'back',ts:now};
+ }
+}
+// a swoopy swim from A to B; arms trail mid-way, body leans into the motion (never upside down)
+function swimPath(A,B,u,side){
+ const k=ease(u),C={x:A.x+(B.x-A.x)*0.25+side*W*0.14,y:A.y+(B.y-A.y)*0.55};
+ const x=(1-k)*(1-k)*A.x+2*(1-k)*k*C.x+k*k*B.x,y=(1-k)*(1-k)*A.y+2*(1-k)*k*C.y+k*k*B.y;
+ const dx=2*(1-k)*(C.x-A.x)+2*k*(B.x-C.x),dy=2*(1-k)*(C.y-A.y)+2*k*(B.y-C.y);
+ const ang=Math.max(-0.9,Math.min(0.9,Math.atan2(dx,Math.abs(dy)+1)));
+ const m=Math.sin(Math.PI*u);
+ return{x,y,s:A.s+(B.s-A.s)*k,rot:-ang*m,stand:1-0.9*m,pulse:Math.max(0,Math.sin(u*Math.PI*9))*m};
+}
+function updateDive(now){
+ const e=now-dv.ts,B=tileAnchor();
+ if(dv.st==='to'){
+  const u=cl01(e/1500),d=swimPath(dv.a,B,u,1);
+  if(u>=1){dv={st:'enter',ts:now};aboutPic.classList.remove('empty')}
+  return d;
+ }
+ if(dv.st==='enter'){ // the picture fades in over him
+  const u=cl01(e/700);if(u>=1){dv={st:'in'};oct.visible=false}
+  return{x:B.x,y:B.y,s:B.s*(1-0.12*ease(u)),rot:0,stand:1,pulse:0};
+ }
+ if(dv.st==='exit'){ // the picture fades out and he hops out of the frame
+  const u=cl01(e/650);if(u>=1)dv={st:'back',ts:now};
+  return{x:B.x,y:B.y-Math.sin(Math.PI*u)*B.s*ppu*0.9,s:B.s,rot:0,stand:1,pulse:0};
+ }
+ if(dv.st==='back'){
+  const u=cl01(e/1250),d=swimPath(B,homeAnchor(),u,-1);
+  if(u>=1){dv=null;oct.scale.setScalar(sc);onHome()}
+  return d;
+ }
+ return{x:B.x,y:B.y,s:B.s,rot:0,stand:1,pulse:0};
+}
+function onHome(){if(teamQ){teamQ=false;pending=null;runTeam();return}if(pending){const p=pending;pending=null;startPull(p)}}
 function onIntroDone(){introDone=true;if(teamQ){teamQ=false;pending=null;runTeam();return}if(!dealt)navEv.classList.add('pulse');if(pending){const p=pending;pending=null;startPull(p)}}
 
 let last=performance.now(),tt=0,vis=true;
 function frame(now){
  requestAnimationFrame(frame);
  const dt=Math.min(0.05,(now-last)/1000);last=now;
- if(!vis&&!jobs.length&&!pull&&!push&&!curtain&&introDone)return;
+ SR=stage.getBoundingClientRect();
+ checkDive(now);
+ const idle=!vis&&!jobs.length&&!pull&&!push&&!curtain&&introDone&&(!dv||dv.st==='in');
+ if(idle&&blank)return;blank=idle;
  if(introS===null)introS=now;
  tt+=RM?0:dt;
- SR=stage.getBoundingClientRect();
  // intro: swim in, then stand up
  const it=(now-introS)/1000;let px,py,rot,stand,pulse=0;
  if(curtain){px=homeS.x;py=curtain.base;rot=0;stand=1;oct.scale.setScalar(sc*curtain.cs)}
+ else if(dv){const d=updateDive(now);px=d.x;py=d.y;rot=d.rot;stand=d.stand;pulse=d.pulse;oct.scale.setScalar(d.s)}
  else if(RM||it>=SWIM+SET){px=homeS.x;py=homeS.y;rot=0;stand=1;if(!introDone)onIntroDone()}
  else if(it<SWIM){
   const u=it/SWIM,e=cl01(1-Math.pow(1-u,2.4)+0.03*Math.sin(u*Math.PI*6)*(1-u));
@@ -434,7 +497,7 @@ function frame(now){
  }else{
   const u=(it-SWIM)/SET;px=homeS.x;py=homeS.y-Math.sin(Math.PI*u)*12;rot=rotEnd*(1-ease(u));stand=outBack(u);
  }
- lift+=(liftT-lift)*Math.min(1,dt*1.8);if(!curtain)py-=lift*OH*0.07;
+ lift+=(liftT-lift)*Math.min(1,dt*1.8);if(!curtain&&!dv)py-=lift*OH*0.07;
  poseT+=RM?0:dt*(curtain&&curtain.st===3?3:1);
  // lean toward whatever a tentacle is busy with
  let sx=0,n=0;for(const j of jobs)if(j.st===1||j.st===2){sx+=j.tx;n++}
@@ -444,7 +507,7 @@ function frame(now){
  const dp=n?Math.max(-W*0.22,Math.min(W*0.22,(sx/n-W/2)*0.45)):0;
  drift+=(dp-drift)*Math.min(1,dt*2.2);
  const hw=toW(px+drift,py,0);
- oct.position.set(hw.x,hw.y+(stand>=1?Math.sin(tt*1.1)*0.06*sc:0),0);
+ oct.position.set(hw.x,hw.y+(stand>=1&&!dv?Math.sin(tt*1.1)*0.06*sc:0),0);
  oct.rotation.x=0.3*stand;oct.rotation.z=rot-drift/ppu*0.04;
  mg.rotation.z=Math.sin(tt*0.9)*0.03;
  oct.updateMatrixWorld(true);
@@ -474,7 +537,8 @@ if(!GL||RM){
  if(GL){layout();new ResizeObserver(()=>layout()).observe(stage);requestAnimationFrame(frame)}
 }else{
  layout();
- new ResizeObserver(()=>layout()).observe(stage);
+ new ResizeObserver(()=>layout()).observe(stage);addEventListener('resize',()=>layout());
+ if(aboutPic)aboutPic.classList.add('empty');
  new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(stage);
  render().forEach(c=>c.classList.add('wait'));shint.hidden=false;
  requestAnimationFrame(frame);
@@ -495,7 +559,7 @@ function applyFilter(f){
  const seq=++fseq,anim=!RM&&typeof Element.prototype.animate==='function';
  const keep=new Set(list().map(e=>e.id));
  const out=[...track.querySelectorAll('.card')].filter(c=>!keep.has(c.dataset.id));
- if(GL&&!RM&&introDone&&dealt){
+ if(GL&&!RM&&introDone&&dealt&&!dv){
   const back=()=>{
    const first=new Map([...track.querySelectorAll('.card')].filter(c=>keep.has(c.dataset.id)).map(c=>[c.dataset.id,c.getBoundingClientRect()]));
    const cs=render();track.scrollLeft=0;
@@ -535,7 +599,7 @@ const navTeam=document.querySelector('.links a[href="#team"]');
 // (short screens, phones) it first scrolls back up to the octopus; during its entrance it waits for it.
 function runTeam(){
  if(curtain||(pull&&pull.after))return;
- if(!introDone){teamQ=true;return}
+ if(!introDone||dv){teamQ=true;return}
  if(jobs.length||push||pull||cjobs.length)skip();
  startPull(navTeam,()=>startCurtain());
 }
