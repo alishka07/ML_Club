@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CU ML Club</title>
+<meta name="description" content="CU ML Club, the machine learning club at Cardiff University Kazakhstan, Astana: hackathons, webinars and student-run ML projects.">
+<meta name="theme-color" content="#15141d">
+<meta property="og:title" content="CU ML Club">
+<meta property="og:description" content="Hackathons, webinars and student-run ML projects at Cardiff University Kazakhstan, Astana.">
+<meta property="og:image" content="assets/logo.jpg">
+<link rel="icon" href="assets/logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<nav class="top"><div class="wrap">
+  <a class="brand" href="#events"><img src="assets/logo.jpg" alt="">CU ML Club</a>
+  <div class="links"><a href="#events" class="main" id="navEv" data-f="all">Events</a><a href="#team">Team</a><a href="#join">Join the team</a></div>
+</div></nav>
+
+<section id="events">
+  <div class="stage" id="stage">
+    <canvas id="oc" aria-hidden="true"></canvas>
+    <div class="bar2" id="bar2">
+      <div class="filters" id="chips" role="group" aria-label="Filter events">
+        <button class="btn" data-f="all" aria-pressed="false">All</button>
+        <button class="btn" data-f="club" aria-pressed="false">Hackathons</button>
+        <button class="btn" data-f="webinar" aria-pressed="false">Webinars</button>
+        <button class="btn" data-f="community" aria-pressed="false">Student-run</button>
+      </div>
+      <span class="sp" style="flex:1"></span>
+      <div class="pager">
+        <button class="btn ghost" id="shuffle">Shuffle again</button>
+        <button class="btn icon" id="prev" aria-label="Previous events">‹</button>
+        <button class="btn icon" id="next" aria-label="Next events">›</button>
+      </div>
+    </div>
+    <button class="btn ghost skipb" id="skip" hidden>Skip</button>
+    <div class="oarea" id="oarea"></div>
+    <div class="tw"><div class="track" id="track" tabindex="0" aria-label="Upcoming events, scroll sideways"></div><p class="shint" id="shint" hidden>Tap <b>Events</b> at the top. The octopus will pull them out.</p></div>
+    <div class="fly" id="fly" aria-hidden="true"></div>
+  </div>
+</section>
+
+<section class="band alt" id="team"><div class="wrap">
+  <h2>Team</h2>
+  <p class="lead">The people who run CU ML Club: events, datasets, mentoring and this site.</p>
+  <div class="team" id="teamList"></div>
+  <p class="note">Sample names and roles. Swap in your real team.</p>
+</div></section>
+
+<section class="band" id="join"><div class="wrap grid2">
+  <div>
+    <h2>Join the team</h2>
+    <p class="lead">Help run hackathons, mentor newcomers, build datasets or design the next poster. No experience needed, just time and curiosity.</p>
+    <ol class="steps">
+      <li><b>1</b><span>Tell us what you want to do.</span></li>
+      <li><b>2</b><span>Come to the next meetup and meet the team.</span></li>
+      <li><b>3</b><span>Take one small task for the next event.</span></li>
+    </ol>
+  </div>
+  <form class="panel" id="jform">
+    <div class="row">
+      <div><label for="jn">Name</label><input id="jn" required maxlength="40"></div>
+      <div><label for="je">University email</label><input id="je" type="email" required maxlength="80"></div>
+    </div>
+    <div class="row">
+      <div><label for="jy">Year</label><select id="jy"><option>Foundation</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Master's</option></select></div>
+      <div><label for="jl">ML level</label><select id="jl"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+    </div>
+    <label>How you want to help</label>
+    <div class="checks" id="jroles"></div>
+    <label for="jm">Anything else</label><textarea id="jm" maxlength="400" placeholder="Skills, ideas for events, links to your projects"></textarea>
+    <button class="btn pri" type="submit" style="margin-top:18px">Join the team</button>
+    <p class="ok" id="jok" aria-live="polite"></p>
+  </form>
+</div></section>
+
+<footer><div class="wrap"><span>CU ML Club, Cardiff University Kazakhstan, Astana</span><span>Prototype. Events and names are sample data. Forms are saved only in this browser.</span></div></footer>
+
+<dialog id="dlg"><button class="btn icon ghost x" id="dx" aria-label="Close">×</button><div id="db"></div></dialog>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
