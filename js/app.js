@@ -610,6 +610,7 @@ function applyStatic(){
  document.querySelectorAll('[data-i18n]').forEach(x=>{x.textContent=i18(x.dataset.i18n)});
  document.querySelectorAll('[data-i18n-html]').forEach(x=>{x.innerHTML=i18(x.dataset.i18nHtml)});
  document.querySelectorAll('[data-i18n-aria]').forEach(x=>x.setAttribute('aria-label',i18(x.dataset.i18nAria)));
+ document.querySelectorAll('[data-i18n-alt]').forEach(x=>x.setAttribute('alt',i18(x.dataset.i18nAlt)));
  document.querySelectorAll('[data-i18n-ph]').forEach(x=>x.setAttribute('placeholder',i18(x.dataset.i18nPh)));
 }
 function setLang(l){
