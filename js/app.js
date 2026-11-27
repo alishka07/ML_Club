@@ -453,7 +453,10 @@ function crawlTarget(){
  const B=logoAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55),y=-SR.top;
  if(y<=s1||!teamList)return cl01((y-s0)/(s1-s0));
  const s1b=s1+VH*0.3,s2=Math.max(s1b+200,perch().gy-VH*0.55); // he rests in the logo for a while first
- return y<=s1b?1:1+cl01((y-s1b)/(s2-s1b));
+ if(y<=s2||!dock||dock.hidden)return y<=s1b?1:1+cl01((y-s1b)/(s2-s1b));
+ // 2..3: plugged into the team for a while, then carries the free-spot card down into the join form
+ const s2b=s2+VH*0.25,d=dock.getBoundingClientRect(),s3=Math.max(s2b+200,d.top-SR.top+d.height/2-VH*0.5);
+ return y<=s2b?2:2+cl01((y-s2b)/(s3-s2b));
 }
 /* ---------- About -> Team: he climbs out of the logo, crawls to the team and plugs an arm into each member ---------- */
 const teamList=document.getElementById('teamList');
@@ -479,8 +482,29 @@ function cableRoute(i,r0){
   q.push([A[0]*0.75+B[0]*0.25,A[1]*0.75+B[1]*0.25],[A[0]*0.25+B[0]*0.75,A[1]*0.25+B[1]*0.75])}q.push(pts[pts.length-1]);pts=q}
  return pts;
 }
-function avatarAt(i){const a=teamList.querySelectorAll('.member .av')[i];if(!a)return null;const r=a.getBoundingClientRect();return{x:r.left+r.width/2-SR.left,y:r.top+r.height/2-SR.top}}
-const members=()=>teamList.querySelectorAll('.member');
+const sm=u=>{u=cl01(u);return u*u*(3-2*u)};
+const members=()=>teamList.querySelectorAll('.member:not(.ghost)');
+function avatarAt(i){const m=members()[i],a=m&&m.querySelector('.av');if(!a)return null;const r=a.getBoundingClientRect();return{x:r.left+r.width/2-SR.left,y:r.top+r.height/2-SR.top}}
+/* ---------- Team -> Join: he unplugs, carries the "free spot" card down and docks it in the form ---------- */
+const dock=document.getElementById('dock');let gT={x:0,y:0,r:0};
+const ghostEl=()=>document.getElementById('ghost');
+// where he sits at the end: right above the dock slot at the top of the form
+function perch2(){const d=dock.getBoundingClientRect(),P=perch();return{x:d.left+d.width/2-SR.left,y:d.top-SR.top-1.3*P.s*ppu,s:P.s}}
+// the card's path: from its place in the team list into the dock; returns where its top-centre handle is
+function placeGhost(){
+ const g=ghostEl();if(!g||!dock||dock.hidden)return null;
+ const q=cp-2,e=sm((q-0.25)/0.65);
+ if(q<=0){if(gT.x||gT.y||gT.r){gT={x:0,y:0,r:0};g.style.transform='';g.classList.remove('carried','docked')}}
+ else{
+  // natural centre = layout box centre (offset* ignore transforms); shrink to the slot's width if it is narrower
+  const b=g.getBoundingClientRect(),nx=b.left+b.width/2-gT.x,ny=b.top+b.height/2-gT.y,d=dock.getBoundingClientRect();
+  const k=1+(Math.min(1,d.width/g.offsetWidth)-1)*e;
+  const dx=(d.left+d.width/2-nx)*e+Math.sin(Math.PI*e)*W*0.05,dy=(d.top+d.height/2-ny)*e,r=Math.sin(Math.PI*e)*6;
+  gT={x:dx,y:dy,r};g.style.transform=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${k.toFixed(4)})`;
+  g.classList.toggle('carried',e>0.001&&e<0.999);g.classList.toggle('docked',e>=0.999);
+ }
+ const b=g.getBoundingClientRect();return{x:b.left+b.width/2-SR.left,y:b.top+6-SR.top};
+}
 function updateCrawl(dt,now){
  if(!aboutPic||!GL||RM)return;
  const tg=crawlTarget();
@@ -503,6 +527,11 @@ function updateCrawl(dt,now){
  if(prev>0&&cp===0){oct.scale.setScalar(sc);onHome()}
 }
 function crawlPose(now){
+ if(cp>2&&dock&&!dock.hidden){ // team -> above the dock in the join form
+  const P=perch(),J=perch2(),q=cp-2,e=sm((q-0.2)/0.65),amp=W*0.08;
+  const x=P.x+(J.x-P.x)*e+Math.sin(Math.PI*e)*amp,y=P.y+(J.y-P.y)*e,m=Math.sin(Math.PI*e);
+  return{x,y:y+Math.sin(now*0.011)*Math.min(1,crawlV*3)*P.s*ppu*0.12,s:P.s,rot:(J.x>P.x?-1:1)*0.25*m,stand:1,pulse:0};
+ }
  if(cp>1){ // logo -> perch by the team
   const L=logoAnchor(),P=perch(),q=cp-1,k=q*q*(3-2*q),amp=W*0.12;
   const x=L.x+(P.x-L.x)*q+Math.sin(q*Math.PI*2)*amp,y=L.y+(P.y-L.y)*q;
@@ -527,6 +556,7 @@ let feet=null,lastBody=null,bodyV={x:0,y:0},feetFresh=false;
 function updateFeet(now,dt,bx,by){
  if(!(cp>0.02)||curtain||!oct.visible&&!inLogo){
   if(feet){feet.forEach(f=>{if(f.tn.job===f)f.tn.job=null});feet=null;if(teamList)members().forEach(m=>m.classList.remove('linked'))}
+  if(cp<=2)placeGhost();
   return;
  }
  const s=oct.scale.x,R=3.1*s*ppu;
@@ -542,7 +572,8 @@ function updateFeet(now,dt,bx,by){
   if(teamList){const P=perch(),used=new Set();
    [...members()].map((m,i)=>{const a=avatarAt(i);return{i,ang:ang(Math.atan2(a.y-P.y,a.x-P.x))}}).sort((x,y)=>x.ang-y.ang)
     .forEach(m=>{let best=null,bd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-m.ang);if(d<bd){bd=d;best=f}}
-     if(best){used.add(best);best.mem=m.i;best.order=m.i}})}
+     if(best){used.add(best);best.mem=m.i;best.order=m.i}});
+   let hb=null,hd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-90);if(d<hd){hd=d;hb=f}}if(hb)hb.hold=true}
   feetFresh=false;
   lastBody={x:bx,y:by};bodyV={x:0,y:0};
  }
@@ -552,10 +583,12 @@ function updateFeet(now,dt,bx,by){
  const ideal=f=>({x:bx+Math.cos(f.a)*R+dx*lead,y:by+Math.sin(f.a)*R*0.85+dy*lead});
  let stepping=feet.filter(f=>f.st).length;
  const maxStep=sp>R*4?4:2;
- const q=cp-1;
- for(const f of feet)if(f.mem!=null){f.pw=cl01((q-0.6-0.045*f.order)/0.12);f.pw=f.pw*f.pw*(3-2*f.pw)}else f.pw=0;
+ const q=Math.min(cp,2)-1,unplug=1-sm((cp-2)/0.15);
+ for(const f of feet)if(f.mem!=null){f.pw=sm((q-0.6-0.045*f.order)/0.12)*unplug}else f.pw=0;
+ const hw=sm((cp-2.05)/0.2),handle=placeGhost();
+ for(const f of feet)f.hw=f.hold&&handle?hw:0;
  const ms=members();for(const f of feet)if(f.mem!=null&&ms[f.mem])ms[f.mem].classList.toggle('linked',f.pw>0.95);
- const cand=feet.filter(f=>!f.st&&f.pw<0.1).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
+ const cand=feet.filter(f=>!f.st&&f.pw<0.1&&!(f.hw>0.1)).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
  for(const c of cand){
   if(lq>0.3||stepping>=maxStep||c.e<R*0.45)break;
   const i=feet.indexOf(c.f);if((feet[i-1]&&feet[i-1].st)||(feet[i+1]&&feet[i+1].st))continue;
@@ -576,6 +609,7 @@ function updateFeet(now,dt,bx,by){
    x+=(gx-x)*lq;y+=(gy-y)*lq;
    if(lq>0.5&&!f.st){f.x=gx;f.y=gy}
   }
+  if(f.hw>0){x+=(handle.x-x)*f.hw;y+=(handle.y-y)*f.hw;if(f.hw>0.98){f.x=handle.x;f.y=handle.y;f.st=null}}
   if(f.pw>0){ // reach for the member's avatar
    const a=avatarAt(f.mem);
    if(a){x+=(a.x-x)*f.pw;y+=(a.y-y)*f.pw;if(f.pw>0.98){f.x=a.x;f.y=a.y;f.st=null}}
@@ -640,6 +674,13 @@ function frame(now){
    const f=tn.job,L=logoAnchor(),z=0.2*oct.scale.x;
    for(let j=1;j<=N;j++){const q=armAt(f.arm,f.fr[j]);W3.copy(toW(L.l+L.T*q[0],L.t+L.T*q[1],z));oct.worldToLocal(W3);tn.p[j].lerp(W3,lq)}
   }
+  if(tn.job&&tn.job.hw>0){
+   const f=tn.job,g=ghostEl();
+   if(g){const b=g.getBoundingClientRect(),h={x:b.left+b.width/2-SR.left,y:b.top+6-SR.top};
+    W3.copy(tn.root);oct.localToWorld(W3);const r0=toS(W3),z=0.3*oct.scale.x,dl=Math.hypot(h.x-r0.x,h.y-r0.y);
+    const cx=(r0.x+h.x)/2+dl*0.12,cy=(r0.y+h.y)/2;
+    for(let j=1;j<=N;j++){const u=f.fr[j],v=1-u;W3.copy(toW(v*v*r0.x+2*v*u*cx+u*u*h.x,v*v*r0.y+2*v*u*cy+u*u*h.y,z));oct.worldToLocal(W3);tn.p[j].lerp(W3,f.hw)}}
+  }
   if(tn.job&&tn.job.pw>0){
    const f=tn.job,a=avatarAt(f.mem);
    if(a){
@@ -664,6 +705,7 @@ if(!GL||RM){
  layout();
  new ResizeObserver(()=>layout()).observe(stage);addEventListener('resize',()=>layout());
  if(aboutPic)aboutPic.classList.add('vacant');
+ if(dock){dock.hidden=false;sizeDock()}
  new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(stage);
  render().forEach(c=>c.classList.add('wait'));shint.hidden=false;
  requestAnimationFrame(frame);
@@ -779,9 +821,20 @@ function openDlg(id){
 
 /* ---------- team ---------- */
 const TEAM=CLUB.team;
-const renderTeam=()=>{$('#teamList').innerHTML=TEAM.map(m=>{const n=txt(m.n);return `<div class="member"><div class="av">${esc(n.charAt(0))}</div><div><b>${esc(n)}</b><span>${esc(txt(m.r))}</span></div><p>${esc(txt(m.d))}</p></div>`}).join('')};
+const renderTeam=()=>{$('#teamList').innerHTML=TEAM.map(m=>{const n=txt(m.n);return `<div class="member"><div class="av">${esc(n.charAt(0))}</div><div><b>${esc(n)}</b><span>${esc(txt(m.r))}</span></div><p>${esc(txt(m.d))}</p></div>`}).join('')+ghostHTML();gT={x:0,y:0,r:0};updateGhost();sizeDock()};
 renderTeam();
-
+// the "free spot" card: the octopus carries it into the join form, and it fills in as you type
+function ghostHTML(){return `<div class="member ghost" id="ghost"><div class="av" id="gAv">?</div><div><b id="gName"></b><span id="gRole"></span></div><p id="gDesc"></p></div>`}
+function updateGhost(){
+ const g=document.getElementById('ghost');if(!g)return;
+ const n=(($('#jn')||{}).value||'').trim()||(S.join&&S.join.name)||'',roles=[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value);
+ $('#gAv').textContent=n?n.charAt(0).toUpperCase():'?';$('#gName').textContent=n||i18('ghost.name');
+ $('#gRole').textContent=roles.length?roles.join(', '):i18('ghost.role');
+ $('#gDesc').textContent=S.join&&!$('#jn').value?i18('ghost.welcome'):i18('ghost.desc');
+ g.classList.toggle('filled',!!n);
+}
+function sizeDock(){const g=document.getElementById('ghost');if(!dock||!g)return;dock.style.width=g.offsetWidth+'px';
+ dock.style.height=Math.round(g.offsetHeight*Math.min(1,dock.offsetWidth/g.offsetWidth))+'px'}
 /* ---------- join ---------- */
 const HELP=CLUB.help;
 const renderHelp=()=>{const on=[...document.querySelectorAll('#jroles input')].map(x=>x.checked);
@@ -790,8 +843,10 @@ renderHelp();
 $('#jform').addEventListener('submit',e=>{
  e.preventDefault();const n=$('#jn').value.trim();if(!n)return;
  S.join={name:n,email:$('#je').value.trim(),year:$('#jy').value,level:$('#jl').value,help:[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value),note:$('#jm').value.trim()};save();
- e.target.reset();$('#jok').textContent=i18('join.ok',{n});
+ e.target.reset();$('#jok').textContent=i18('join.ok',{n});updateGhost();
 });
+$('#jform').addEventListener('input',updateGhost);$('#jform').addEventListener('change',updateGhost);
+addEventListener('resize',sizeDock);
 
 /* ---------- language switch ---------- */
 function applyStatic(){
