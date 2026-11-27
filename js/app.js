@@ -494,13 +494,16 @@ function perch2(){const d=dock.getBoundingClientRect(),P=perch();return{x:d.left
 function placeGhost(){
  const g=ghostEl();if(!g||!dock||dock.hidden||g.classList.contains('joined'))return null;
  const q=cp-2,e=sm((q-0.25)/0.65);
- if(q<=0){if(gT.x||gT.y||gT.r){gT={x:0,y:0,r:0};g.style.transform='';g.classList.remove('carried','docked')}}
+ if(q<=0){if(gT.x||gT.y||gT.r||g.style.width){gT={x:0,y:0,r:0};g.style.transform='';g.style.width='';g.classList.remove('carried','docked')}}
  else{
-  // natural centre = layout box centre (offset* ignore transforms); shrink to the slot's width if it is narrower
-  const b=g.getBoundingClientRect(),nx=b.left+b.width/2-gT.x,ny=b.top+b.height/2-gT.y,d=dock.getBoundingClientRect();
-  const k=1+(Math.min(1,d.width/g.offsetWidth)-1)*e;
-  const dx=(d.left+d.width/2-nx)*e+Math.sin(Math.PI*e)*W*0.05,dy=(d.top+d.height/2-ny)*e,r=Math.sin(Math.PI*e)*6;
-  gT={x:dx,y:dy,r};g.style.transform=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${r.toFixed(2)}deg) scale(${k.toFixed(4)})`;
+  // on the way the card widens from its team-list cell to the full width of the form, so it fills in
+  // horizontally there; its top-left corner goes onto the slot's top-left corner
+  const d=dock.getBoundingClientRect(),wn=(members()[0]||g).offsetWidth;
+  g.style.width=(wn+(d.width-wn)*e).toFixed(1)+'px';
+  const b=g.getBoundingClientRect(),nl=b.left+b.width/2-gT.x-g.offsetWidth/2,nt=b.top+b.height/2-gT.y-g.offsetHeight/2;
+  const dx=(d.left-nl)*e+Math.sin(Math.PI*e)*W*0.05,dy=(d.top-nt)*e,r=Math.sin(Math.PI*e)*6;
+  gT={x:dx,y:dy,r};g.style.transform=`translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${r.toFixed(2)}deg)`;
+  if(e>=0.999){const h=g.offsetHeight;if(Math.abs(dock.offsetHeight-h)>1)dock.style.height=h+'px'} // the slot grows with the card
   g.classList.toggle('carried',e>0.001&&e<0.999);g.classList.toggle('docked',e>=0.999);
  }
  const b=g.getBoundingClientRect();return{x:b.left+b.width/2-SR.left,y:b.top+6-SR.top};
@@ -675,7 +678,7 @@ function startJoin(){
 }
 function finishJoin(){
  joining=false;const g=ghostEl();if(!g)return;
- gT={x:0,y:0,r:0};g.style.transform='';g.classList.remove('ghost','carried','docked');g.classList.add('joined');
+ gT={x:0,y:0,r:0};g.style.transform='';g.style.width='';g.classList.remove('ghost','carried','docked');g.classList.add('joined');
  updateGhost();
  if(feet){assignMembers();celebrate=members().length-1}
  else setTimeout(()=>confetti(g.querySelector('.av')),300);
@@ -912,9 +915,11 @@ function updateGhost(){
  $('#gDesc').textContent=joined||joining?i18('ghost.welcome'):i18('ghost.desc');
  g.classList.toggle('filled',!!n);
  const ds=dock&&dock.querySelector('span');if(ds)ds.textContent=i18(joined?'dock.joined':'dock.label');
+ sizeDock();
 }
-function sizeDock(){const g=document.getElementById('ghost');if(!dock||!g)return;dock.style.width=g.offsetWidth+'px';
- dock.style.height=Math.round(g.offsetHeight*Math.min(1,dock.offsetWidth/g.offsetWidth))+'px'}
+// the slot is as tall as the card will be once it is form-wide (measured off-screen in the same frame)
+function sizeDock(){const g=document.getElementById('ghost');if(!dock||!g||dock.hidden||g.classList.contains('docked'))return;
+ const w0=g.style.width;g.style.width=dock.clientWidth+'px';const h=g.offsetHeight;g.style.width=w0;dock.style.height=h+'px'}
 /* ---------- join ---------- */
 const HELP=CLUB.help;
 const renderHelp=()=>{const on=[...document.querySelectorAll('#jroles input')].map(x=>x.checked);
