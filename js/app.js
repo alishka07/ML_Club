@@ -780,9 +780,9 @@ function frame(now){
  const hw=toW(px+drift,py,0);
  oct.position.set(hw.x,hw.y+(stand>=1&&cp===0?Math.sin(tt*1.1)*0.06*sc:0),0);
  oct.rotation.x=0.3*stand*(1-lq);oct.rotation.z=rot-drift/ppu*0.04;
- mg.rotation.z=Math.sin(tt*0.9)*0.03;updateLook(now,dt);if(proj){glowB=Math.max(glowB,0.55);drawBeam()}
+ mg.rotation.z=Math.sin(tt*0.9)*0.03;updateLook(now,dt);placeBubble();if(proj){glowB=Math.max(glowB,0.55);drawBeam()}
  oct.updateMatrixWorld(true);
- updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);updateFeet(now,dt,px+drift,py);
+ updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);updateFeet(now,dt,px+drift,py);updateSlap(now);
  for(const tn of TN){
   poseStand(tn,poseT);
   if(stand<1){poseSwim(tn,tt,pulse);for(let j=0;j<=N;j++)tn.fk[j].lerpVectors(tn.fkW[j],tn.fkS[j],stand)}
@@ -984,6 +984,54 @@ function drawBeam(){
  const g=beam.querySelector('#beamG');g.setAttribute('cx',e.x.toFixed(1));g.setAttribute('cy',e.y.toFixed(1));g.setAttribute('r',far.toFixed(1));
  const s=beam.querySelector('#beamS');s.setAttribute('cx',e.x.toFixed(1));s.setAttribute('cy',e.y.toFixed(1));s.setAttribute('r',(oct.scale.x*ppu*4.2).toFixed(1));
  const h=beam.querySelector('#beamEye');h.setAttribute('cx',e.x.toFixed(1));h.setAttribute('cy',e.y.toFixed(1));
+}
+/* ---------- try to pet him: he slaps your hand away ---------- */
+// While he stands on the shelf, the cursor turns into a hand over his body. Click / tap him and one arm
+// swats right at that spot (the page jolts, a little "bonk"), the eye flares and a speech bubble says
+// he is an assistant, not a pet. Poking again gets other lines.
+let slap=null,pets=0,bubbleT=0;
+const bubble=document.getElementById('bubble');
+const canPet=()=>GL&&introDone&&oct.visible&&cp===0&&!curtain&&!pull&&!jobs.length&&!cjobs.length&&!push&&!proj&&!dlg.open;
+function onBody(x,y){ // a soft ellipse around his dome and collar
+ if(!eyeG)return false;const e=eyeScreen(),u=oct.scale.x*ppu;
+ const cx=e.x,cy=e.y-1.15*u,rx=1.45*u,ry=2.1*u;return((x-cx)/rx)**2+((y-cy)/ry)**2<=1;
+}
+addEventListener('pointermove',e=>{if(e.pointerType!=='mouse')return;
+ const on=canPet()&&!e.target.closest('button,a,input,select,textarea,label,.card,nav,dialog')&&onBody(e.clientX,e.clientY);
+ document.body.classList.toggle('petting',on)},{passive:true});
+addEventListener('pointerdown',e=>{
+ if(!canPet()||slap||e.target.closest('button,a,input,select,textarea,label,.card,nav,dialog')||!onBody(e.clientX,e.clientY))return;
+ const lines=['pet.1','pet.2',dealt?'pet.3b':'pet.3a','pet.4'],key=lines[Math.min(pets,lines.length-1)];pets++;
+ flareT=performance.now();say(i18(key));
+ if(RM){bonk(e.clientX,e.clientY);return}
+ // a front arm on the side of the poke swats (in front of his body, towards you)
+ let tn=null,bs=1e9;for(const q of TN){if(q.job||q.d.z<0.2)continue;const d=Math.abs(q.rootS.x-(e.clientX-SR.left));if(d<bs){bs=d;tn=q}}
+ if(!tn)tn=pickTN(e.clientX-SR.left);if(!tn){bonk(e.clientX,e.clientY);return}
+ slap={tn,st:1,ts:performance.now(),x:e.clientX-SR.left,y:e.clientY-SR.top};tn.job=slap;
+});
+function updateSlap(now){
+ if(!slap)return;const s=slap,tn=s.tn,e=now-s.ts;
+ if(s.st===1){ // wind up a little, then a fast swat at the spot
+  const u=cl01(e/170);tn.w=Math.max(tn.w,ease(u));tn.tgt.copy(toW(s.x,s.y,ZP()*(4.2-1.4*u)));
+  if(u>=1){s.st=2;s.ts=now;bonk(s.x+SR.left,s.y+SR.top)}
+ }else if(s.st===2){tn.w=1;tn.tgt.copy(toW(s.x,s.y,ZP()*2.8));if(e>140){s.st=3;s.ts=now}}
+ else{tn.w=1-ease(cl01(e/RL));if(e>=RL){tn.job=null;slap=null}}
+}
+function bonk(x,y){
+ if(!RM)document.body.animate([{transform:'translate(0,0)'},{transform:'translate(-7px,4px)'},{transform:'translate(6px,-3px)'},{transform:'translate(-3px,2px)'},{transform:'none'}],{duration:260,easing:'ease-out'});
+ const b=document.createElement('div');b.className='bonk';b.style.left=x+'px';b.style.top=y+'px';b.textContent='✦';document.body.appendChild(b);
+ setTimeout(()=>b.remove(),700);
+}
+function say(text){
+ if(!bubble)return;bubble.textContent=text;bubble.hidden=false;
+ bubble.classList.remove('show');void bubble.offsetWidth;bubble.classList.add('show');
+ clearTimeout(bubbleT);bubbleT=setTimeout(()=>{bubble.classList.remove('show');setTimeout(()=>{bubble.hidden=true},250)},2800);
+ placeBubble();
+}
+function placeBubble(){ // above his dome, kept on screen
+ if(!bubble||bubble.hidden||!eyeG)return;const e=eyeScreen(),u=oct.scale.x*ppu,w=bubble.offsetWidth;
+ bubble.style.left=Math.max(8,Math.min(innerWidth-w-8,e.x+u*0.9-w*0.25))+'px';
+ bubble.style.top=Math.max(8,e.y-3.6*u-bubble.offsetHeight)+'px';
 }
 /* ---------- team ---------- */
 const TEAM=CLUB.team;

@@ -199,3 +199,10 @@ dialog.proj-left{margin-left:max(4vw,24px)}
 dialog.proj-bottom{margin-bottom:12px;max-height:min(68vh,calc(100% - 32px))}
 dialog.proj-in{animation:projIn .6s ease-out}
 @keyframes projIn{0%{transform:scale(.04);opacity:0;filter:brightness(2.2) saturate(.4)}30%{opacity:.75}38%{opacity:.25}50%{opacity:.95}58%{opacity:.5}75%{transform:none;opacity:1;filter:brightness(1.25)}100%{transform:none;opacity:1;filter:none}}
+/* petting the octopus: hand cursor, his speech bubble, the "bonk" of the slap */
+body.petting{cursor:pointer}
+.bubble{position:fixed;z-index:46;max-width:min(260px,70vw);padding:10px 14px;border-radius:16px 16px 16px 4px;background:var(--lav);color:var(--deep);font:600 15px/1.35 Inter,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.4);pointer-events:none;opacity:0;transform:translateY(6px) scale(.9);transform-origin:left bottom;transition:opacity .2s,transform .25s cubic-bezier(.3,1.6,.5,1)}
+.bubble.show{opacity:1;transform:none}
+.bonk{position:fixed;z-index:47;pointer-events:none;color:#fff;font-size:34px;text-shadow:0 0 12px #9a92f7,0 0 24px #7c5cff;transform:translate(-50%,-50%);animation:bonk .65s ease-out forwards}
+@keyframes bonk{0%{transform:translate(-50%,-50%) scale(.3) rotate(0);opacity:1}40%{transform:translate(-50%,-50%) scale(1.4) rotate(25deg);opacity:1}100%{transform:translate(-50%,-50%) scale(1.8) rotate(45deg);opacity:0}}
+@media(prefers-reduced-motion:reduce){.bonk{animation:none;opacity:0}}
