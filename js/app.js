@@ -448,14 +448,19 @@ function logoAnchor(){ // the picture itself (the frame is tilted 2deg, so take 
  return{x:r.left+T*LOGO.eye[0]-SR.left,y:r.top+T*LOGO.eye[1]-SR.top,s:LOGO.eyeR*T/(0.6*ppu),T,l:r.left-SR.left,t:r.top-SR.top};
 }
 // 0: on the shelf (the whole stage still on screen), 1: in the picture (frame a bit below mid-screen)
+// The phone keyboard shrinks the window height; the scroll mapping keeps the height from before it opened
+// (only a width change, i.e. rotating the phone, resets it), so typing does not move the octopus or the card.
+let svh=0,svw=0;
+function stableVH(){if(innerWidth!==svw){svw=innerWidth;svh=innerHeight}else svh=Math.max(svh,innerHeight);return svh}
 // 0..1: shelf -> logo picture; 1..2: logo -> perched by the team, arms plugged into the members
 function crawlTarget(){
- const B=logoAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55),y=-SR.top;
+ const SVH=stableVH();
+ const B=logoAnchor(),s0=Math.max(0,SR.height-SVH),s1=Math.max(s0+200,B.y-SVH*0.55),y=-SR.top;
  if(y<=s1||!teamList)return cl01((y-s0)/(s1-s0));
- const s1b=s1+VH*0.3,s2=Math.max(s1b+200,perch().gy-VH*0.55); // he rests in the logo for a while first
+ const s1b=s1+SVH*0.3,s2=Math.max(s1b+200,perch().gy-SVH*0.55); // he rests in the logo for a while first
  if(y<=s2||!dock||dock.hidden)return y<=s1b?1:1+cl01((y-s1b)/(s2-s1b));
  // 2..3: plugged into the team for a while, then carries the free-spot card down into the join form
- const s2b=s2+VH*0.25,d=dock.getBoundingClientRect(),s3=Math.max(s2b+200,d.top-SR.top+d.height/2-VH*0.5);
+ const s2b=s2+SVH*0.25,d=dock.getBoundingClientRect(),s3=Math.max(s2b+200,d.top-SR.top+d.height/2-SVH*0.5);
  return y<=s2b?2:2+cl01((y-s2b)/(s3-s2b));
 }
 /* ---------- About -> Team: he climbs out of the logo, crawls to the team and plugs an arm into each member ---------- */
@@ -510,7 +515,8 @@ function placeGhost(){
 }
 function updateCrawl(dt,now){
  if(!aboutPic||!GL||RM)return;
- const tg=crawlTarget();
+ let tg=crawlTarget();
+ const fe=document.activeElement;if(tg>2.5&&fe&&fe!==jform&&jform&&jform.contains(fe))tg=3; // typing: stay at the form
  if(needIntro){ // after the Team curtain the page is below the logo: he is already inside the picture
   if(tg<0.99)return;
   needIntro=false;introDone=true;cp=tg;inT=-1e9;feetFresh=true;
@@ -912,7 +918,7 @@ function updateGhost(){
  const n=joined?S.join.name:typed,roles=joined?(S.join.help||[]):[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value);
  $('#gAv').textContent=n?n.charAt(0).toUpperCase():'?';$('#gName').textContent=n||i18('ghost.name');
  $('#gRole').textContent=roles.length?roles.join(', '):i18('ghost.role');
- $('#gDesc').textContent=joined||joining?i18('ghost.welcome'):i18('ghost.desc');
+ $('#gDesc').textContent=joined||joining?i18('ghost.welcome'):i18(n?'ghost.candidate':'ghost.desc');
  g.classList.toggle('filled',!!n);
  const ds=dock&&dock.querySelector('span');if(ds)ds.textContent=i18(joined?'dock.joined':'dock.label');
  sizeDock();
