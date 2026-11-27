@@ -4,7 +4,12 @@
 {
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const TYPES={club:'Club hackathon',webinar:'Webinar',community:'Student-run'};
+// ---------- language: interface texts in js/i18n.js, event/team texts in js/data.js ----------
+const I=window.I18N;
+let LANG=(()=>{try{const s=localStorage.getItem('cuml-lang');if(s&&I[s])return s}catch(e){}return /^(ru|kk|be|uk)/i.test(navigator.language||'')?'ru':'en'})();
+const i18=(k,v)=>{let s=(I[LANG]&&I[LANG][k])??I.en[k]??k;if(v)for(const x in v)s=s.split('{'+x+'}').join(v[x]);return s};
+const txt=v=>v&&typeof v==='object'?(v[LANG]??v.en??''):(v??'');
+const typeName=ty=>I.en['type.'+ty]?i18('type.'+ty):'';
 const SAMPLE=CLUB.events;
 const ROLES=CLUB.roles;
 
@@ -13,21 +18,22 @@ try{const j=JSON.parse(localStorage.getItem('cuml-v1')||'null');if(j&&typeof j==
 const save=()=>{try{localStorage.setItem('cuml-v1',JSON.stringify(S))}catch(e){}};
 const all=()=>SAMPLE.concat(S.events);
 const byId=id=>all().find(e=>e.id===id);
-const fd=iso=>{const d=new Date(iso);return{wd:d.toLocaleDateString('en-GB',{weekday:'short'}),day:d.getDate(),mon:d.toLocaleDateString('en-GB',{month:'short'}),time:d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}),full:d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const fd=iso=>{const d=new Date(iso),lc=LANG==='ru'?'ru-RU':'en-GB';return{wd:cap(d.toLocaleDateString(lc,{weekday:'short'})),day:d.getDate(),mon:d.toLocaleDateString(lc,{month:'short'}),time:d.toLocaleTimeString(lc,{hour:'2-digit',minute:'2-digit'}),full:cap(d.toLocaleDateString(lc,{weekday:'long',day:'numeric',month:'long',year:'numeric'}))}};
 const taken=e=>Math.min(e.seats,e.taken+(S.reg[e.id]?1:0));
 let filter='all';
 const track=$('#track'),stage=$('#stage'),fly=$('#fly'),oarea=$('#oarea'),cv=$('#oc');
 
 const cardHTML=e=>{const d=fd(e.date),t=taken(e),inn=!!S.reg[e.id],left=e.seats-t;
  return `<article class="card t-${esc(e.type)}${inn?' in':''}" data-id="${esc(e.id)}">
- <div class="ctop"><span class="tag">${TYPES[e.type]||''}</span><span class="when">${d.time}</span></div>
+ <div class="ctop"><span class="tag">${typeName(e.type)}</span><span class="when">${d.time}</span></div>
  <div class="date">${d.wd} ${d.day} ${d.mon}</div>
- <h3>${esc(e.title)}</h3>
- <p class="meta">${esc(e.where)}<br>${esc(e.dur)}</p>
- <div class="seat"><div class="bar"><i style="width:${Math.round(t/e.seats*100)}%"></i></div>${left>0?`${left} of ${e.seats} places left`:'Full, waiting list open'}</div>
- <button class="btn" data-open="${esc(e.id)}">${inn?"You're in":(e.type==='community'?'Ask to join':'Join')}</button></article>`};
+ <h3>${esc(txt(e.title))}</h3>
+ <p class="meta">${esc(txt(e.where))}<br>${esc(txt(e.dur))}</p>
+ <div class="seat"><div class="bar"><i style="width:${Math.round(t/e.seats*100)}%"></i></div>${left>0?i18('card.left',{left,seats:e.seats}):i18('card.full')}</div>
+ <button class="btn" data-open="${esc(e.id)}">${i18(inn?'card.in':e.type==='community'?'card.ask':'card.join')}</button></article>`};
 const list=()=>all().filter(e=>filter==='all'||e.type===filter).sort((a,b)=>a.date<b.date?-1:1);
-function render(){const L=list();track.innerHTML=L.length?L.map(cardHTML).join(''):'<p class="empty">Nothing of this type yet. Run one below.</p>';return[...track.querySelectorAll('.card')]}
+function render(){const L=list();track.innerHTML=L.length?L.map(cardHTML).join(''):`<p class="empty">${i18('empty')}</p>`;return[...track.querySelectorAll('.card')]}
 
 /* ---------- robot octopus ---------- */
 const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -209,7 +215,10 @@ function rel(el){const r=el.getBoundingClientRect(),s=stage.getBoundingClientRec
 function skip(){
  stopPush();
  if(cjobs.length){finishCollect();return}
- if(pull){pull.chip.style.transform='';pull.tn.job=null;filter=pull.chip.dataset.f;setPressed(filter);pull=null;render();dealt=true}
+ if(pull){const P=pull;P.chip.style.transform='';P.tn.job=null;pull=null;
+  // a pull with its own follow-up (the Team button) just jumps to it; a filter/Events pull deals at once
+  if(P.after){showSkip();P.after(null);return}
+  filter=P.chip.dataset.f;setPressed(filter);render();dealt=true}
  jobs.forEach(j=>{j.c.classList.remove('wait');j.cl.remove();if(j.tn)j.tn.job=null});jobs=[];fly.innerHTML='';showSkip();
  if(dealt)bar2.classList.add('on');
 }
@@ -525,8 +534,7 @@ const navTeam=document.querySelector('.links a[href="#team"]');
 navTeam.addEventListener('click',e=>{
  if(!GL||RM||window.scrollY>40||!introDone||curtain||pull||cjobs.length)return;
  e.preventDefault();if(jobs.length||push)skip();
- const go=()=>startPull(navTeam,()=>startCurtain());
- if(dealt)collect(()=>{dealt=false;shint.hidden=false;navEv.classList.add('pulse');go()});else go();
+ startPull(navTeam,()=>startCurtain());
 });
 const tryRelease=e=>{if(!curtain)return;e.preventDefault();if(curtain.st===3){curtain.h0=curtain.hem;curtain.bb=curtain.base;curtain.st=4;curtain.ts=performance.now()}};
 addEventListener('wheel',tryRelease,{passive:false});addEventListener('touchmove',tryRelease,{passive:false});
@@ -541,27 +549,29 @@ track.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b)
 
 const dlg=$('#dlg'),db=$('#db');
 $('#dx').addEventListener('click',()=>dlg.close());
+dlg.addEventListener('close',()=>{dlgId=null});
 dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
 function refreshCard(id){
  skip();const old=track.querySelector(`.card[data-id="${CSS.escape(id)}"]`),e=byId(id);
  if(old&&e){const t=document.createElement('div');t.innerHTML=cardHTML(e);old.replaceWith(t.firstElementChild)}
 }
+let dlgId=null;
 function openDlg(id){
- const e=byId(id);if(!e)return;
+ const e=byId(id);if(!e)return;dlgId=id;
  const d=fd(e.date),t=taken(e),r=S.reg[e.id],full=e.seats-t<=0;
- const facts=[['When',`${d.full}, ${d.time}`],['Length',e.dur],['Where',e.where],['Places',full?'Full':`${e.seats-t} of ${e.seats} left`]];
- if(e.metric)facts.push(['Metric',e.metric]);if(e.data)facts.push(['Data',e.data]);if(e.speaker)facts.push(['Speaker',e.speaker]);
- if(e.org)facts.push(['Organiser',e.org]);if(e.roles&&e.roles.length)facts.push(['Looking for',e.roles.join(', ')]);
+ const facts=[[i18('d.when'),`${d.full}, ${d.time}`],[i18('d.length'),txt(e.dur)],[i18('d.where'),txt(e.where)],[i18('d.places'),full?i18('d.full'):i18('d.placesLeft',{left:e.seats-t,seats:e.seats})]];
+ if(e.metric)facts.push([i18('d.metric'),txt(e.metric)]);if(e.data)facts.push([i18('d.data'),txt(e.data)]);if(e.speaker)facts.push([i18('d.speaker'),txt(e.speaker)]);
+ if(e.org)facts.push([i18('d.org'),txt(e.org)]);if(e.roles&&e.roles.length)facts.push([i18('d.looking'),e.roles.map(txt).join(', ')]);
  let form='';
- if(r)form=`<p class="ok">You're in as ${esc(r.name)}.</p><button class="btn" id="unreg" style="margin-top:10px">Cancel my place</button>`;
+ if(r)form=`<p class="ok">${esc(i18('d.youreIn',{n:r.name}))}</p><button class="btn" id="unreg" style="margin-top:10px">${i18('d.cancel')}</button>`;
  else{
-  const extra=e.type==='club'?`<div class="row"><div><label for="rl">Level</label><select id="rl"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div><div><label for="rm">Taking part</label><select id="rm"><option>Solo</option><option>With my team</option><option>Match me with a team</option></select></div></div>`
-   :e.type==='community'?`<label for="rm">Your role</label><select id="rm">${(e.roles&&e.roles.length?e.roles:ROLES).map(x=>`<option>${esc(x)}</option>`).join('')}</select>`:'';
-  form=`<form id="rform"><div class="row"><div><label for="rn">Name</label><input id="rn" required maxlength="40"></div><div><label for="re">Email</label><input id="re" type="email" required maxlength="80"></div></div>${extra}
-  <button class="btn pri" type="submit" style="margin-top:16px">${full?'Join waiting list':e.type==='community'?'Ask to join':'Register'}</button></form>`;
+  const extra=e.type==='club'?`<div class="row"><div><label for="rl">${i18('d.level')}</label><select id="rl"><option>${i18('lvl.beg')}</option><option>${i18('lvl.mid')}</option><option>${i18('lvl.adv')}</option></select></div><div><label for="rm">${i18('d.taking')}</label><select id="rm"><option>${i18('d.solo')}</option><option>${i18('d.withTeam')}</option><option>${i18('d.match')}</option></select></div></div>`
+   :e.type==='community'?`<label for="rm">${i18('d.role')}</label><select id="rm">${(e.roles&&e.roles.length?e.roles:ROLES).map(x=>`<option>${esc(txt(x))}</option>`).join('')}</select>`:'';
+  form=`<form id="rform"><div class="row"><div><label for="rn">${i18('d.name')}</label><input id="rn" required maxlength="40"></div><div><label for="re">${i18('d.email')}</label><input id="re" type="email" required maxlength="80"></div></div>${extra}
+  <button class="btn pri" type="submit" style="margin-top:16px">${i18(full?'d.waitlist':e.type==='community'?'d.ask':'d.register')}</button></form>`;
  }
- db.innerHTML=`<div class="t-${esc(e.type)}"><span class="tag">${TYPES[e.type]||''}</span></div><h2 style="margin:12px 44px 0 0;font-size:26px">${esc(e.title)}</h2>
- <p class="lead">${esc(e.about||'')}</p><dl class="facts">${facts.map(f=>`<dt>${f[0]}</dt><dd>${esc(f[1])}</dd>`).join('')}</dl>${form}`;
+ db.innerHTML=`<div class="t-${esc(e.type)}"><span class="tag">${typeName(e.type)}</span></div><h2 style="margin:12px 44px 0 0;font-size:26px">${esc(txt(e.title))}</h2>
+ <p class="lead">${esc(txt(e.about))}</p><dl class="facts">${facts.map(f=>`<dt>${f[0]}</dt><dd>${esc(f[1])}</dd>`).join('')}</dl>${form}`;
  const rf=$('#rform');
  if(rf)rf.addEventListener('submit',ev=>{ev.preventDefault();S.reg[e.id]={name:$('#rn').value.trim(),email:$('#re').value.trim(),role:$('#rm')?$('#rm').value:'',level:$('#rl')?$('#rl').value:''};save();refreshCard(e.id);openDlg(e.id)});
  const ur=$('#unreg');if(ur)ur.addEventListener('click',()=>{delete S.reg[e.id];save();refreshCard(e.id);openDlg(e.id)});
@@ -570,14 +580,38 @@ function openDlg(id){
 
 /* ---------- team ---------- */
 const TEAM=CLUB.team;
-$('#teamList').innerHTML=TEAM.map(m=>`<div class="member"><div class="av">${esc(m.n.charAt(0))}</div><div><b>${esc(m.n)}</b><span>${esc(m.r)}</span></div><p>${esc(m.d)}</p></div>`).join('');
+const renderTeam=()=>{$('#teamList').innerHTML=TEAM.map(m=>{const n=txt(m.n);return `<div class="member"><div class="av">${esc(n.charAt(0))}</div><div><b>${esc(n)}</b><span>${esc(txt(m.r))}</span></div><p>${esc(txt(m.d))}</p></div>`}).join('')};
+renderTeam();
 
 /* ---------- join ---------- */
 const HELP=CLUB.help;
-$('#jroles').innerHTML=HELP.map(r=>`<label><input type="checkbox" value="${esc(r)}">${esc(r)}</label>`).join('');
+const renderHelp=()=>{const on=[...document.querySelectorAll('#jroles input')].map(x=>x.checked);
+ $('#jroles').innerHTML=HELP.map((r,i)=>`<label><input type="checkbox" value="${esc(txt(r))}"${on[i]?' checked':''}>${esc(txt(r))}</label>`).join('')};
+renderHelp();
 $('#jform').addEventListener('submit',e=>{
  e.preventDefault();const n=$('#jn').value.trim();if(!n)return;
  S.join={name:n,email:$('#je').value.trim(),year:$('#jy').value,level:$('#jl').value,help:[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value),note:$('#jm').value.trim()};save();
- e.target.reset();$('#jok').textContent=`Got it, ${n}. In this prototype your application is saved in this browser only.`;
+ e.target.reset();$('#jok').textContent=i18('join.ok',{n});
 });
+
+/* ---------- language switch ---------- */
+function applyStatic(){
+ document.documentElement.lang=LANG;
+ document.querySelectorAll('[data-i18n]').forEach(x=>{x.textContent=i18(x.dataset.i18n)});
+ document.querySelectorAll('[data-i18n-html]').forEach(x=>{x.innerHTML=i18(x.dataset.i18nHtml)});
+ document.querySelectorAll('[data-i18n-aria]').forEach(x=>x.setAttribute('aria-label',i18(x.dataset.i18nAria)));
+ document.querySelectorAll('[data-i18n-ph]').forEach(x=>x.setAttribute('placeholder',i18(x.dataset.i18nPh)));
+}
+function setLang(l){
+ if(!I[l]||l===LANG||curtain||(pull&&pull.after))return;
+ skip();LANG=l;try{localStorage.setItem('cuml-lang',l)}catch(e){}
+ applyStatic();
+ const cs=render();if(!dealt)cs.forEach(c=>c.classList.add('wait'));
+ renderTeam();renderHelp();
+ if(curtainEl){curtainEl.remove();curtainEl=null}
+ if(dlg.open&&dlgId)openDlg(dlgId);
+ $('#jok').textContent='';
+}
+$('#lang').addEventListener('click',()=>setLang(LANG==='ru'?'en':'ru'));
+applyStatic();
 }

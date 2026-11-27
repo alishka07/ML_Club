@@ -18,72 +18,74 @@
 <body>
 <nav class="top"><div class="wrap">
   <a class="brand" href="#events"><img src="assets/logo.jpg" alt="">CU ML Club</a>
-  <div class="links"><a href="#events" class="main" id="navEv" data-f="all">Events</a><a href="#team">Team</a><a href="#join">Join the team</a></div>
+  <div class="links"><a href="#events" class="main" id="navEv" data-f="all" data-i18n="nav.events">Events</a><a href="#team" data-i18n="nav.team">Team</a><a href="#join" data-i18n="nav.join">Join the team</a></div>
+  <button class="lang" id="lang" type="button" data-i18n="lang.switch" data-i18n-aria="lang.switchLabel">RU</button>
 </div></nav>
 
 <section id="events">
   <div class="stage" id="stage">
     <canvas id="oc" aria-hidden="true"></canvas>
     <div class="bar2" id="bar2">
-      <div class="filters" id="chips" role="group" aria-label="Filter events">
-        <button class="btn" data-f="all" aria-pressed="false">All</button>
-        <button class="btn" data-f="club" aria-pressed="false">Hackathons</button>
-        <button class="btn" data-f="webinar" aria-pressed="false">Webinars</button>
-        <button class="btn" data-f="community" aria-pressed="false">Student-run</button>
+      <div class="filters" id="chips" role="group" aria-label="Filter events" data-i18n-aria="f.label">
+        <button class="btn" data-f="all" aria-pressed="false" data-i18n="f.all">All</button>
+        <button class="btn" data-f="club" aria-pressed="false" data-i18n="f.club">Hackathons</button>
+        <button class="btn" data-f="webinar" aria-pressed="false" data-i18n="f.webinar">Webinars</button>
+        <button class="btn" data-f="community" aria-pressed="false" data-i18n="f.community">Student-run</button>
       </div>
       <span class="sp" style="flex:1"></span>
       <div class="pager">
-        <button class="btn ghost" id="shuffle">Shuffle again</button>
-        <button class="btn icon" id="prev" aria-label="Previous events">‹</button>
-        <button class="btn icon" id="next" aria-label="Next events">›</button>
+        <button class="btn ghost" id="shuffle" data-i18n="shuffle">Shuffle again</button>
+        <button class="btn icon" id="prev" aria-label="Previous events" data-i18n-aria="prev">‹</button>
+        <button class="btn icon" id="next" aria-label="Next events" data-i18n-aria="next">›</button>
       </div>
     </div>
-    <button class="btn ghost skipb" id="skip" hidden>Skip</button>
+    <button class="btn ghost skipb" id="skip" hidden data-i18n="skip">Skip</button>
     <div class="oarea" id="oarea"></div>
-    <div class="tw"><div class="track" id="track" tabindex="0" aria-label="Upcoming events, scroll sideways"></div><p class="shint" id="shint" hidden>Tap <b>Events</b> at the top. The octopus will pull them out.</p></div>
+    <div class="tw"><div class="track" id="track" tabindex="0" aria-label="Upcoming events, scroll sideways" data-i18n-aria="track"></div><p class="shint" id="shint" hidden data-i18n-html="hint">Tap <b>Events</b> at the top. The octopus will pull them out.</p></div>
     <div class="fly" id="fly" aria-hidden="true"></div>
   </div>
 </section>
 
 <section class="band alt" id="team"><div class="wrap">
-  <h2>Team</h2>
-  <p class="lead">The people who run CU ML Club: events, datasets, mentoring and this site.</p>
+  <h2 data-i18n="team.title">Team</h2>
+  <p class="lead" data-i18n="team.lead">The people who run CU ML Club: events, datasets, mentoring and this site.</p>
   <div class="team" id="teamList"></div>
-  <p class="note">Sample names and roles. Swap in your real team.</p>
+  <p class="note" data-i18n="team.note">Sample names and roles. Swap in your real team.</p>
 </div></section>
 
 <section class="band" id="join"><div class="wrap grid2">
   <div>
-    <h2>Join the team</h2>
-    <p class="lead">Help run hackathons, mentor newcomers, build datasets or design the next poster. No experience needed, just time and curiosity.</p>
+    <h2 data-i18n="join.title">Join the team</h2>
+    <p class="lead" data-i18n="join.lead">Help run hackathons, mentor newcomers, build datasets or design the next poster. No experience needed, just time and curiosity.</p>
     <ol class="steps">
-      <li><b>1</b><span>Tell us what you want to do.</span></li>
-      <li><b>2</b><span>Come to the next meetup and meet the team.</span></li>
-      <li><b>3</b><span>Take one small task for the next event.</span></li>
+      <li><b>1</b><span data-i18n="join.s1">Tell us what you want to do.</span></li>
+      <li><b>2</b><span data-i18n="join.s2">Come to the next meetup and meet the team.</span></li>
+      <li><b>3</b><span data-i18n="join.s3">Take one small task for the next event.</span></li>
     </ol>
   </div>
   <form class="panel" id="jform">
     <div class="row">
-      <div><label for="jn">Name</label><input id="jn" required maxlength="40"></div>
-      <div><label for="je">University email</label><input id="je" type="email" required maxlength="80"></div>
+      <div><label for="jn" data-i18n="join.name">Name</label><input id="jn" required maxlength="40"></div>
+      <div><label for="je" data-i18n="join.email">University email</label><input id="je" type="email" required maxlength="80"></div>
     </div>
     <div class="row">
-      <div><label for="jy">Year</label><select id="jy"><option>Foundation</option><option>Year 1</option><option>Year 2</option><option>Year 3</option><option>Master's</option></select></div>
-      <div><label for="jl">ML level</label><select id="jl"><option>Beginner</option><option>Intermediate</option><option>Advanced</option></select></div>
+      <div><label for="jy" data-i18n="join.year">Year</label><select id="jy"><option data-i18n="year.f">Foundation</option><option data-i18n="year.1">Year 1</option><option data-i18n="year.2">Year 2</option><option data-i18n="year.3">Year 3</option><option data-i18n="year.m">Master's</option></select></div>
+      <div><label for="jl" data-i18n="join.level">ML level</label><select id="jl"><option data-i18n="lvl.beg">Beginner</option><option data-i18n="lvl.mid">Intermediate</option><option data-i18n="lvl.adv">Advanced</option></select></div>
     </div>
-    <label>How you want to help</label>
+    <label data-i18n="join.help">How you want to help</label>
     <div class="checks" id="jroles"></div>
-    <label for="jm">Anything else</label><textarea id="jm" maxlength="400" placeholder="Skills, ideas for events, links to your projects"></textarea>
-    <button class="btn pri" type="submit" style="margin-top:18px">Join the team</button>
+    <label for="jm" data-i18n="join.more">Anything else</label><textarea id="jm" maxlength="400" data-i18n-ph="join.morePh" placeholder="Skills, ideas for events, links to your projects"></textarea>
+    <button class="btn pri" type="submit" style="margin-top:18px" data-i18n="join.submit">Join the team</button>
     <p class="ok" id="jok" aria-live="polite"></p>
   </form>
 </div></section>
 
-<footer><div class="wrap"><span>CU ML Club, Cardiff University Kazakhstan, Astana</span><span>Prototype. Events and names are sample data. Forms are saved only in this browser.</span></div></footer>
+<footer><div class="wrap"><span data-i18n="foot.place">CU ML Club, Cardiff University Kazakhstan, Astana</span><span data-i18n="foot.note">Prototype. Events and names are sample data. Forms are saved only in this browser.</span></div></footer>
 
-<dialog id="dlg"><button class="btn icon ghost x" id="dx" aria-label="Close">×</button><div id="db"></div></dialog>
+<dialog id="dlg"><button class="btn icon ghost x" id="dx" aria-label="Close" data-i18n-aria="d.close">×</button><div id="db"></div></dialog>
 
 <script src="vendor/three.min.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>
 </body>

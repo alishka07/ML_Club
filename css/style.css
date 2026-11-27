@@ -130,3 +130,6 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .member b{display:block;font-family:Sora,sans-serif}
 .member span{color:var(--acc2);font-size:14px;font-weight:600}
 .member p{grid-column:1/-1;color:var(--mut);font-size:14px}
+.lang{font:600 14px Inter,sans-serif;color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:10px;min-height:36px;padding:0 10px;cursor:pointer}
+.lang:hover{color:var(--ink);border-color:var(--acc2)}
+.lang:focus-visible{outline:3px solid var(--acc2);outline-offset:2px}
