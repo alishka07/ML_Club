@@ -468,7 +468,8 @@ function stableVH(){if(innerWidth!==svw){svw=innerWidth;svh=innerHeight}else svh
 // 0..1: shelf -> logo picture; 1..2: logo -> perched by the team, arms plugged into the members
 function crawlTarget(){
  const SVH=stableVH();
- const B=logoAnchor(),s0=Math.max(0,SR.height-SVH),s1=Math.max(s0+200,B.y-SVH*0.55),y=-SR.top;
+ // he leaves the shelf only once it is mostly scrolled away (you can still look at the cards' buttons)
+ const B=logoAnchor(),s0=Math.max(0,SR.height-SVH*0.6),s1=Math.max(s0+120,B.y-SVH*0.6),y=-SR.top;
  if(y<=s1||!teamList)return cl01((y-s0)/(s1-s0));
  const s1b=s1+SVH*0.3,s2=Math.max(s1b+200,perch().gy-SVH*0.55); // he rests in the logo for a while first
  if(y<=s2||!dock||dock.hidden)return y<=s1b?1:1+cl01((y-s1b)/(s2-s1b));
@@ -664,24 +665,42 @@ function caretPoint(el){
   x=Math.min(r.right-10,r.left+12+mctx.measureText(last).width%Math.max(1,r.width-24));y=Math.min(r.bottom-10,r.top+18+(lines.length-1)*22)}
  return{x,y};
 }
+// On the events he looks at the card under the mouse (or the mouse itself), on phones at the card you
+// swipe the shelf to; with the details "projected", at the window. Scrolling tilts the head (springy).
+let gptr=null,trackT=-1e9,lastSY=scrollY,scrollV=0,headH=0,headV=0;
+addEventListener('pointermove',e=>{if(e.pointerType==='mouse')gptr={x:e.clientX,y:e.clientY,t:performance.now(),card:e.target.closest?e.target.closest('#track .card'):null}},{passive:true});
+track.addEventListener('scroll',()=>{trackT=performance.now()},{passive:true});
+function eventsTarget(now){
+ if(proj&&dlg.open){const r=dlg.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height*0.4}}
+ if(gptr&&now-gptr.t<3000){if(gptr.card&&gptr.card.isConnected){const r=gptr.card.getBoundingClientRect();return{x:r.left+r.width/2,y:r.top+r.height*0.35}}return{x:gptr.x,y:gptr.y}}
+ if(now-trackT<2500){const tr=track.getBoundingClientRect(),mid=tr.left+tr.width/2;let best=null,bd=1e9;
+  for(const c of track.querySelectorAll('.card:not(.wait)')){const r=c.getBoundingClientRect(),d=Math.abs(r.left+r.width/2-mid);if(d<bd){bd=d;best=r}}
+  if(best)return{x:best.left+best.width/2,y:best.top+best.height*0.35}}
+ return null;
+}
 function updateLook(now,dt){
  if(!eyeG)return;
  let tx=null,ty=null;
  const atForm=cp>2.6&&oct.visible,ae=document.activeElement;
  if(atForm&&ae&&jform.contains(ae)&&ae!==jform&&ae.tagName!=='BUTTON'){const c=caretPoint(ae);tx=c.x;ty=c.y}
  else if(atForm&&ptr&&now-ptr.t<2500){tx=ptr.x;ty=ptr.y}
+ else if(cp<0.02&&introDone&&oct.visible&&!curtain){const g=eventsTarget(now);if(g){tx=g.x;ty=g.y}}
  let yaw=0,pitch=0;
  if(tx!=null){
   W3.set(0,0,0);eyeG.localToWorld(W3);const e=toS(W3),dx=tx-(e.x+SR.left),dy=ty-(e.y+SR.top);
   yaw=Math.max(-0.7,Math.min(0.7,Math.atan2(dx,420)));pitch=Math.max(-0.6,Math.min(0.6,Math.atan2(dy,420)));
  }else{ // idle glances
   if(now>glance.t){glance={t:now+1800+Math.random()*2600,x:(Math.random()-0.5)*0.7,y:(Math.random()-0.5)*0.4}}
-  if(cp>0.02&&!inLogo){yaw=glance.x;pitch=glance.y}
+  if((cp>0.02&&!inLogo)||(cp<0.02&&introDone&&!jobs.length&&!pull)){yaw=glance.x;pitch=glance.y}
  }
+ // scrolling: the head tips toward where the page is going and springs back when you stop
+ const sy=scrollY,sv=(sy-lastSY)/Math.max(dt,1e-3);lastSY=sy;scrollV+=(sv-scrollV)*Math.min(1,dt*8);
+ const ht=Math.max(-0.35,Math.min(0.35,scrollV/2200));headV+=(ht-headH)*90*dt;headV*=Math.exp(-7*dt);headH+=headV*dt;
+ pitch+=headH*0.8;
  const k=Math.min(1,dt*9);lookA.y+=(yaw-lookA.y)*k;lookA.x+=(pitch-lookA.x)*k;
- eyeG.rotation.set(lookA.x,lookA.y,0);
+ eyeG.rotation.set(Math.max(-0.7,Math.min(0.7,lookA.x)),lookA.y,0);
  const nod=Math.max(0,1-(now-peckT)/220);
- mg.rotation.z+=-lookA.y*0.18;mg.rotation.x=lookA.x*0.12+nod*0.12;mg.position.y=nod*0.1;
+ mg.rotation.z+=-lookA.y*0.18+headH*0.35*Math.sin(now*0.004);mg.rotation.x=lookA.x*0.12+nod*0.12+headH;mg.position.y=nod*0.1;
 }
 if(jform){
  jform.addEventListener('pointermove',e=>{ptr={x:e.clientX,y:e.clientY,t:performance.now()}});
@@ -755,12 +774,13 @@ function frame(now){
  for(const j of cjobs)if(j.st===1||j.st===2){sx+=j.tx;n++}
  if(pull){sx+=pull.tx;n++}
  if(push&&push.st<3){sx+=push.tx;n++}
- const dp=n?Math.max(-W*0.22,Math.min(W*0.22,(sx/n-W/2)*0.45)):0;
+ let dp=n?Math.max(-W*0.22,Math.min(W*0.22,(sx/n-W/2)*0.45)):0;
+ if(proj)dp=proj.side==='right'?-W*0.16:proj.side==='left'?W*0.16:0; // lean away from the projected window
  drift+=(dp-drift)*Math.min(1,dt*2.2);
  const hw=toW(px+drift,py,0);
  oct.position.set(hw.x,hw.y+(stand>=1&&cp===0?Math.sin(tt*1.1)*0.06*sc:0),0);
  oct.rotation.x=0.3*stand*(1-lq);oct.rotation.z=rot-drift/ppu*0.04;
- mg.rotation.z=Math.sin(tt*0.9)*0.03;updateLook(now,dt);
+ mg.rotation.z=Math.sin(tt*0.9)*0.03;updateLook(now,dt);if(proj){glowB=Math.max(glowB,0.55);drawBeam()}
  oct.updateMatrixWorld(true);
  updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);updateFeet(now,dt,px+drift,py);
  for(const tn of TN){
@@ -889,19 +909,19 @@ window.addEventListener('scroll',solid,{passive:true});solid();
 const step=d=>{const c=track.querySelector('.card');track.scrollBy({left:d*((c?c.offsetWidth:250)+16),behavior:'smooth'})};
 $('#prev').addEventListener('click',()=>step(-1));$('#next').addEventListener('click',()=>step(1));
 track.addEventListener('keydown',e=>{if(e.key==='ArrowRight'){e.preventDefault();step(1)}if(e.key==='ArrowLeft'){e.preventDefault();step(-1)}});
-track.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b)openDlg(b.dataset.open)});
+track.addEventListener('click',e=>{const b=e.target.closest('[data-open]');if(b)openDlg(b.dataset.open,true)});
 
 const dlg=$('#dlg'),db=$('#db');
 $('#dx').addEventListener('click',()=>dlg.close());
-dlg.addEventListener('close',()=>{dlgId=null});
+dlg.addEventListener('close',()=>{dlgId=null;endProject()});
 dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
 function refreshCard(id){
  skip();const old=track.querySelector(`.card[data-id="${CSS.escape(id)}"]`),e=byId(id);
  if(old&&e){const t=document.createElement('div');t.innerHTML=cardHTML(e);old.replaceWith(t.firstElementChild)}
 }
 let dlgId=null;
-function openDlg(id){
- const e=byId(id);if(!e)return;dlgId=id;
+function openDlg(id,fromCard){
+ const e=byId(id);if(!e)return;dlgId=id;const wasOpen=dlg.open;
  const d=fd(e.date),past=isPast(e),t=taken(e),r=!past&&S.reg[e.id],full=!!e.seats&&e.seats-t<=0;
  const facts=[[i18('d.when'),`${d.full}, ${e.time?txt(e.time):d.time}`]];
  if(e.dur)facts.push([i18('d.length'),txt(e.dur)]);if(e.where)facts.push([i18('d.where'),txt(e.where)]);
@@ -922,9 +942,49 @@ function openDlg(id){
  const rf=$('#rform');
  if(rf)rf.addEventListener('submit',ev=>{ev.preventDefault();S.reg[e.id]={name:$('#rn').value.trim(),email:$('#re').value.trim(),role:$('#rm')?$('#rm').value:'',level:$('#rl')?$('#rl').value:''};save();refreshCard(e.id);openDlg(e.id)});
  const ur=$('#unreg');if(ur)ur.addEventListener('click',()=>{delete S.reg[e.id];save();refreshCard(e.id);openDlg(e.id)});
- if(!dlg.open)dlg.showModal();
+ if(!dlg.open){if(fromCard&&canProject())startProject();dlg.showModal();if(proj)aimProject()}
+ else if(!wasOpen&&proj)aimProject();
 }
 
+/* ---------- "Details": the octopus projects the event window out of its eye ---------- */
+// The eye flares, the octopus leans aside so the window does not cover him, the window grows out of
+// the eye with a flicker and a cone of light joins them; the rest of the page dims, he stays in a soft
+// spotlight and keeps looking at the window. Closing fades the beam. Without WebGL / with reduced motion
+// the window just opens.
+let proj=null;
+const beam=document.getElementById('beam');
+const canProject=()=>GL&&!RM&&beam&&cp<0.02&&introDone&&oct.visible&&!curtain&&!pull&&!cjobs.length;
+function eyeScreen(){W3.set(0,0,0);eyeG.localToWorld(W3);const e=toS(W3);return{x:e.x+SR.left,y:e.y+SR.top}}
+function startProject(){
+ const wide=innerWidth>=900;
+ proj={side:wide?(eyeScreen().x<innerWidth/2?'right':'left'):'bottom'};
+ dlg.classList.add('proj','proj-'+proj.side);flareT=performance.now();
+}
+function aimProject(){ // grow the window out of the eye, then keep the beam on it every frame
+ if(!proj)return;const e=eyeScreen(),r=dlg.getBoundingClientRect();
+ dlg.style.transformOrigin=`${(e.x-r.left).toFixed(0)}px ${(e.y-r.top).toFixed(0)}px`;
+ dlg.classList.remove('proj-in');void dlg.offsetWidth;dlg.classList.add('proj-in');
+ beam.classList.add('on');
+}
+function endProject(){
+ if(!proj)return;proj=null;beam.classList.remove('on');
+ dlg.classList.remove('proj','proj-in','proj-left','proj-right','proj-bottom');dlg.style.transformOrigin='';
+}
+// the cone: from the eye to the two corners of the window that face it (plus the corner in between)
+function drawBeam(){
+ if(!proj||!dlg.open||!eyeG)return;
+ const e=eyeScreen(),r=dlg.getBoundingClientRect(),C=[[r.left,r.top],[r.right,r.top],[r.right,r.bottom],[r.left,r.bottom]];
+ const inside=e.x>r.left&&e.x<r.right&&e.y>r.top&&e.y<r.bottom;
+ const ang=C.map(c=>Math.atan2(c[1]-e.y,c[0]-e.x));let base=ang[0];const rel=ang.map(a=>{let d=a-base;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d});
+ let ia=0,ib=0;rel.forEach((a,i)=>{if(a<rel[ia])ia=i;if(a>rel[ib])ib=i});
+ let near=0,nd=1e9;C.forEach((c,i)=>{const d=Math.hypot(c[0]-e.x,c[1]-e.y);if(d<nd){nd=d;near=i}});
+ const pts=[[e.x,e.y],C[ia]];if(near!==ia&&near!==ib&&!(e.x>r.left&&e.x<r.right)&&!(e.y>r.top&&e.y<r.bottom))pts.push(C[near]);pts.push(C[ib]);
+ const far=Math.max(...C.map(c=>Math.hypot(c[0]-e.x,c[1]-e.y)));
+ beam.querySelector('#beamP').setAttribute('points',inside?'':pts.map(p=>p.map(v=>v.toFixed(1)).join(',')).join(' '));
+ const g=beam.querySelector('#beamG');g.setAttribute('cx',e.x.toFixed(1));g.setAttribute('cy',e.y.toFixed(1));g.setAttribute('r',far.toFixed(1));
+ const s=beam.querySelector('#beamS');s.setAttribute('cx',e.x.toFixed(1));s.setAttribute('cy',e.y.toFixed(1));s.setAttribute('r',(oct.scale.x*ppu*4.2).toFixed(1));
+ const h=beam.querySelector('#beamEye');h.setAttribute('cx',e.x.toFixed(1));h.setAttribute('cy',e.y.toFixed(1));
+}
 /* ---------- team ---------- */
 const TEAM=CLUB.team;
 const renderTeam=()=>{$('#teamList').innerHTML=TEAM.map(m=>{const n=txt(m.n);return `<div class="member"><div class="av">${esc(n.charAt(0))}</div><div><b>${esc(n)}</b><span>${esc(txt(m.r))}</span></div><p>${esc(txt(m.d))}</p></div>`}).join('')+ghostHTML();gT={x:0,y:0,r:0};updateGhost();sizeDock()};

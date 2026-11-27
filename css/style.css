@@ -187,3 +187,15 @@ label.confirm{display:flex;gap:10px;align-items:flex-start;font-weight:500;color
 label.confirm input{width:18px;min-height:0;margin-top:3px;flex:none;accent-color:var(--acc)}
 .checks input[type=radio]{width:18px;min-height:0;accent-color:var(--acc)}
 #jok a{color:var(--acc2)}
+/* "Details" projected out of the octopus's eye */
+.beam{position:fixed;inset:0;width:100vw;height:100vh;z-index:45;pointer-events:none;opacity:0;transition:opacity .35s}
+.beam.on{opacity:1}
+.beam .dim{fill:rgba(8,7,16,.62)}
+.beam #beamEye{filter:blur(6px)}
+dialog.proj::backdrop{background:transparent}
+dialog.proj{box-shadow:0 0 0 1px rgba(154,146,247,.5),0 0 60px rgba(124,92,255,.45)}
+dialog.proj-right{margin-right:max(4vw,24px)}
+dialog.proj-left{margin-left:max(4vw,24px)}
+dialog.proj-bottom{margin-bottom:12px;max-height:min(68vh,calc(100% - 32px))}
+dialog.proj-in{animation:projIn .6s ease-out}
+@keyframes projIn{0%{transform:scale(.04);opacity:0;filter:brightness(2.2) saturate(.4)}30%{opacity:.75}38%{opacity:.25}50%{opacity:.95}58%{opacity:.5}75%{transform:none;opacity:1;filter:brightness(1.25)}100%{transform:none;opacity:1;filter:none}}

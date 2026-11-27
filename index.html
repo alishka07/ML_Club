@@ -101,6 +101,11 @@
 
 <footer><div class="wrap"><span data-i18n="foot.place">CU ML Club, Cardiff University Kazakhstan, Astana</span><a class="foot-ig" href="https://www.instagram.com/cardiff.ml.kz/" target="_blank" rel="noopener"><svg class="ig-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.3" cy="6.7" r="1.2" fill="currentColor"/></svg>@cardiff.ml.kz</a><span data-i18n="foot.note">Prototype. Team names are sample data. Join applications go to the club’s Google Form.</span></div></footer>
 
+<svg class="beam" id="beam" aria-hidden="true" width="100%" height="100%"><defs>
+  <radialGradient id="beamG" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="1"><stop offset="0" stop-color="#e4dcff" stop-opacity=".75"/><stop offset=".35" stop-color="#9a86ff" stop-opacity=".35"/><stop offset="1" stop-color="#7c5cff" stop-opacity=".08"/></radialGradient>
+  <radialGradient id="beamSG"><stop offset=".55" stop-color="#000"/><stop offset="1" stop-color="#fff"/></radialGradient>
+  <mask id="beamM"><rect width="100%" height="100%" fill="#fff"/><circle id="beamS" cx="0" cy="0" r="1" fill="url(#beamSG)"/></mask>
+ </defs><rect class="dim" width="100%" height="100%" mask="url(#beamM)"/><polygon id="beamP" fill="url(#beamG)"/><circle id="beamEye" cx="0" cy="0" r="14" fill="#efe9ff" opacity=".85"/></svg>
 <dialog id="dlg"><button class="btn icon ghost x" id="dx" aria-label="Close" data-i18n-aria="d.close">×</button><div id="db"></div></dialog>
 
 <script src="vendor/three.min.js"></script>
