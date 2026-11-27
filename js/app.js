@@ -420,24 +420,36 @@ function endCurtain(){
 // Scrolling back up he climbs out and crawls back to the shelf.
 const aboutPic=document.getElementById('aboutPic');
 let cp=0,crawlV=0,inLogo=false,inT=0,blank=false;
-function tileAnchor(){
- const r=aboutPic.getBoundingClientRect(),T=r.width,s=T*0.8/(10.4*ppu);
- return{x:r.left+T/2-SR.left,y:r.top+(T-5.2*s*ppu)/2+3.1*s*ppu-SR.top,s};
-}
 const homeAnchor=()=>({x:homeS.x,y:homeS.y-lift*OH*0.07,s:sc});
 // The pose of the drawn octopus in the logo, as fractions of the picture: where the eye is, how big it
 // is (sets his scale), how the head leans, and where the eight arm curls end. Near the end of the crawl
 // he blends into this pose so that the drawing can take over from him.
-const LOGO={eye:[0.615,0.445],eyeR:0.067,lean:-0.52,
- tips:[[0.19,0.30],[0.47,0.28],[0.32,0.48],[0.17,0.80],[0.38,0.85],[0.77,0.76],[0.93,0.77],[0.94,0.45]]};
+// arms: each drawn arm traced from where it leaves the body to the end of its curl (percent of the picture)
+const LOGO={eye:[0.615,0.445],eyeR:0.067,lean:-0.52,arms:[
+ [[46.7,53.3],[40.8,54.6],[35.8,51.7],[32.9,48.3],[32.1,41.7],[32.1,35],[31.7,29.2],[31.3,25.8],[28.3,22.5],[23.3,21.3],[19.2,23.3],[17.5,26.7],[17.9,30],[20,32.1],[20.6,31.4]],
+ [[43.3,46.7],[40.4,42.9],[37.9,37.5],[37.3,32.5],[39.2,25.8],[42.7,22.5],[46.7,22.5],[50,24.2],[51.7,26.7],[50.4,29.2],[49.2,28.6]],
+ [[53.3,61.7],[50.8,65],[48.3,74.2],[43.3,80],[37.5,84.2],[29.2,86.3],[20,86.3],[16.3,82.5],[16.7,78.8],[18.3,78.3]],
+ [[54.2,62.5],[54.6,65.4],[57.1,72.5],[59.3,77.1],[65.8,80.8],[76.3,82.3],[80,79.2],[79.6,75],[77.1,73.3],[76.3,74.4]],
+ [[61.7,64.2],[65.8,68.3],[70,70.4],[79.2,67.5],[87.9,65.4],[94.2,68.3],[96.3,75],[94.2,79.2],[91.3,78.3],[91.9,76.6]],
+ [[69.2,56.7],[72.1,60.4],[79.2,60],[83.8,58.3],[85.8,51.7],[86.7,45],[89.6,36.7],[93.3,36.7],[96.3,41.7],[95.8,45.8],[93.3,47.5],[92.4,46.2]],
+ [[52,55],[49,57.5],[47,60.5],[47.5,63]],   // tucked under the body
+ [[64,52],[68,53],[71,55.5],[70.5,58]]      // tucked under the body
+].map(a=>a.map(q=>[q[0]/100,q[1]/100]))};
+// a point at fraction f of the way along a traced arm (by length)
+function armAt(a,f){
+ if(!a.L){a.L=[0];for(let i=1;i<a.length;i++)a.L.push(a.L[i-1]+Math.hypot(a[i][0]-a[i-1][0],a[i][1]-a[i-1][1]))}
+ const d=f*a.L[a.L.length-1];let i=1;while(i<a.length-1&&a.L[i]<d)i++;
+ const u=(d-a.L[i-1])/((a.L[i]-a.L[i-1])||1);return[a[i-1][0]+(a[i][0]-a[i-1][0])*u,a[i-1][1]+(a[i][1]-a[i-1][1])*u];
+}
 let lq=0,glowB=0;
-function logoAnchor(){
- const r=aboutPic.getBoundingClientRect(),T=r.width;
+const logoImg=aboutPic&&aboutPic.querySelector('img');
+function logoAnchor(){ // the picture itself (the frame is tilted 2deg, so take its centre and unrotated size)
+ const b=logoImg.getBoundingClientRect(),T=logoImg.offsetWidth,r={left:b.left+b.width/2-T/2,top:b.top+b.height/2-T/2};
  return{x:r.left+T*LOGO.eye[0]-SR.left,y:r.top+T*LOGO.eye[1]-SR.top,s:LOGO.eyeR*T/(0.6*ppu),T,l:r.left-SR.left,t:r.top-SR.top};
 }
 // 0: on the shelf (the whole stage still on screen), 1: in the picture (frame a bit below mid-screen)
 function crawlTarget(){
- const B=tileAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55);
+ const B=logoAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55);
  return cl01((-SR.top-s0)/(s1-s0));
 }
 function updateCrawl(dt,now){
@@ -445,15 +457,15 @@ function updateCrawl(dt,now){
  const tg=crawlTarget();
  if(needIntro){ // after the Team curtain the page is below the logo: he is already inside the picture
   if(tg<0.99)return;
-  needIntro=false;introDone=true;cp=1;lq=1;inLogo=true;inT=-1e9;oct.visible=false;aboutPic.classList.remove('empty');
+  needIntro=false;introDone=true;cp=1;lq=1;inLogo=true;inT=-1e9;oct.visible=false;aboutPic.classList.remove('vacant');
  }
  const busy=jobs.length||pull||cjobs.length||curtain||push||!introDone;
  const prev=cp,goal=busy?0:tg;
  cp+=(goal-cp)*Math.min(1,dt*5);if(Math.abs(goal-cp)<0.002)cp=goal;
  crawlV=crawlV*0.85+0.15*Math.abs(cp-prev)/Math.max(dt,1e-3);
  lq=cl01((cp-0.8)/0.18);lq=lq*lq*(3-2*lq);
- if(!inLogo&&cp>=0.985){inLogo=true;inT=now;aboutPic.classList.remove('empty','merge');void aboutPic.offsetWidth;aboutPic.classList.add('merge')}
- else if(inLogo&&cp<0.95){inLogo=false;aboutPic.classList.add('empty');oct.visible=true}
+ if(!inLogo&&cp>=0.985){inLogo=true;inT=now;aboutPic.classList.remove('vacant','merge');void aboutPic.offsetWidth;aboutPic.classList.add('merge')}
+ else if(inLogo&&cp<0.95){inLogo=false;aboutPic.classList.add('vacant');oct.visible=true}
  if(inLogo&&now-inT>950)oct.visible=false;
  glowB=inLogo?Math.max(0,1-(now-inT)/800):lq*0.35;
  // while crawling he goes over the event cards (at home the cards sit in front of his legs)
@@ -483,10 +495,11 @@ function updateFeet(now,dt,bx,by){
  const s=oct.scale.x,R=3.1*s*ppu;
  if(!feet){
   feet=[...TN].sort((a,b)=>a.d.x-b.d.x).map((tn,i)=>{const f={tn,a:FEET[i],x:tn.tipS.x,y:tn.tipS.y,st:null};tn.job=f;return f});
-  // give each arm the logo curl in the same angular order around the eye, so arms never cross
+  // give each arm a drawn arm in the same angular order around the eye, so arms never cross
   const ang=a=>{let d=a*180/Math.PI;return d<-90?d+360:d};
-  const la=LOGO.tips.map(p=>({p,a:ang(Math.atan2(p[1]-LOGO.eye[1],p[0]-LOGO.eye[0]))})).sort((a,b)=>a.a-b.a);
-  [...feet].sort((a,b)=>ang(a.a)-ang(b.a)).forEach((f,i)=>{f.logo=la[i].p});
+  const la=LOGO.arms.map(a=>{const m=a[Math.floor(a.length/2)];return{a,ang:ang(Math.atan2(m[1]-LOGO.eye[1],m[0]-LOGO.eye[0]))}}).sort((x,y)=>x.ang-y.ang);
+  [...feet].sort((a,b)=>ang(a.a)-ang(b.a)).forEach((f,i)=>{f.arm=la[i].a;f.logo=f.arm[f.arm.length-1];
+   let c=0;f.fr=[0].concat(f.tn.lens.map(l=>c+=l)).map(v=>v/c)}); // where each joint sits along the arm
   lastBody={x:bx,y:by};bodyV={x:0,y:0};
  }
  const id=Math.max(dt,1e-3),k6=Math.min(1,dt*6);
@@ -572,6 +585,10 @@ function frame(now){
    T2.copy(tn.tgt);oct.worldToLocal(T2);fabrik(tn.ik,T2,tn.lens);
    for(let j=0;j<=N;j++)tn.p[j].lerpVectors(tn.fk[j],tn.ik[j],tn.w);
   }else for(let j=0;j<=N;j++)tn.p[j].copy(tn.fk[j]);
+  if(lq>0&&tn.job&&tn.job.arm){ // final pose: every joint goes onto the traced line of its drawn arm
+   const f=tn.job,L=logoAnchor(),z=0.2*oct.scale.x;
+   for(let j=1;j<=N;j++){const q=armAt(f.arm,f.fr[j]);W3.copy(toW(L.l+L.T*q[0],L.t+L.T*q[1],z));oct.worldToLocal(W3);tn.p[j].lerp(W3,lq)}
+  }
   W3.copy(tn.p[N]);oct.localToWorld(W3);tn.tipS=toS(W3);
   W3.copy(tn.root);oct.localToWorld(W3);tn.rootS=toS(W3);
   writeTN(tn);
@@ -588,7 +605,7 @@ if(!GL||RM){
 }else{
  layout();
  new ResizeObserver(()=>layout()).observe(stage);addEventListener('resize',()=>layout());
- if(aboutPic)aboutPic.classList.add('empty');
+ if(aboutPic)aboutPic.classList.add('vacant');
  new IntersectionObserver(es=>{vis=es[0].isIntersecting}).observe(stage);
  render().forEach(c=>c.classList.add('wait'));shint.hidden=false;
  requestAnimationFrame(frame);
