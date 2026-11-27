@@ -1,78 +1,53 @@
 /*
   Данные сайта CU ML Club.
   Здесь всё, что нужно менять без копания в логике: события, команда, варианты в формах.
-  Сейчас это примеры (sample data) — замените на настоящие.
+  События настоящие; команда пока — примеры (sample data), замените на настоящую.
 
   Любой текст можно писать на двух языках: {en: '...', ru: '...'}.
   Если написать просто строку, она покажется на обоих языках (удобно для имён, метрик, ролей вроде 'NLP').
 
   Событие (events):
     id      уникальная строка, по ней хранится регистрация в браузере
-    type    'club' (хакатон клуба), 'webinar' (вебинар) или 'community' (студенческий проект)
+    type    'workshop' (воркшоп), 'lecture' (лекция), 'meetup' (встреча); для будущего есть и
+            'club' (хакатон клуба), 'webinar' (вебинар), 'community' (студенческий проект)
     title   название
     date    дата и время начала в формате 'YYYY-MM-DDTHH:MM' (местное время)
-    dur     длительность текстом
-    where   где проходит
-    seats   всего мест
-    taken   сколько уже занято
     about   описание для окна события
-  Необязательные поля, показываются в окне события, если заданы:
+  Необязательные поля:
+    end       когда заканчивается ('YYYY-MM-DDTHH:MM'); без него событие считается прошедшим через 2 часа
+              после начала. Прошедшие события показываются с пометкой «Уже прошло» и без записи
+    dur       длительность текстом
+    where     где проходит
+    time      время текстом для окна события, если оно сложнее одного начала (например, две сессии)
+    cardTime  короткое время для карточки (например, '13:00 · 15:00')
+    img       картинка или постер для окна события (файл в assets/events/)
+    seats, taken   всего мест и сколько занято (тогда на карточке будет полоска мест)
     metric, data        для хакатонов (метрика и датасет)
-    speaker             для вебинаров
+    speaker             для лекций и вебинаров
     org, roles          для студенческих проектов (организатор и кого ищут)
   Порядок в массиве не важен: на полке карточки сортируются по дате.
 */
 window.CLUB = {
   events: [
-    {id: 'e1', type: 'club', date: '2026-12-05T10:00', seats: 30, taken: 18, metric: 'RMSE',
-      title: {en: 'Mini Kaggle: forecast Astana air quality', ru: 'Мини-Kaggle: прогноз качества воздуха в Астане'},
-      dur: {en: 'Sat and Sun, 48 hours', ru: 'Сб и вс, 48 часов'},
-      where: {en: 'On campus + Kaggle', ru: 'Кампус + Kaggle'},
-      data: {en: 'Hourly PM2.5 and weather readings', ru: 'Почасовые замеры PM2.5 и погоды'},
-      about: {en: 'Predict PM2.5 for the next 24 hours. Starter notebook and baseline included. Teams of up to 3.',
-        ru: 'Предскажите PM2.5 на следующие 24 часа. Стартовый ноутбук и бейзлайн дадим. Команды до 3 человек.'}},
-    {id: 'e2', type: 'webinar', date: '2026-12-09T18:30', seats: 80, taken: 41,
-      title: {en: 'PyTorch from zero: tensors to a training loop', ru: 'PyTorch с нуля: от тензоров до цикла обучения'},
-      dur: {en: '90 minutes', ru: '90 минут'}, where: {en: 'Online', ru: 'Онлайн'},
-      speaker: {en: 'Club mentors', ru: 'Менторы клуба'},
-      about: {en: 'Live coding from an empty notebook to a trained classifier. Bring a laptop, no setup needed.',
-        ru: 'Пишем вживую: от пустого ноутбука до обученного классификатора. Нужен только ноутбук, ничего ставить не надо.'}},
-    {id: 'e4', type: 'club', date: '2026-12-12T10:00', seats: 24, taken: 22, metric: 'Macro F1',
-      title: {en: 'Image sprint: sort campus recycling', ru: 'Спринт по картинкам: сортируем мусор кампуса'},
-      dur: {en: 'Saturday, 8 hours', ru: 'Суббота, 8 часов'}, where: {en: 'On campus', ru: 'Кампус'},
-      data: {en: '2,400 labelled photos of bin contents', ru: '2 400 размеченных фото содержимого урн'},
-      about: {en: 'Train a classifier for paper, plastic, glass and mixed waste. Best model gets demoed at the next meetup.',
-        ru: 'Обучите классификатор: бумага, пластик, стекло и смешанные отходы. Лучшую модель покажем на следующей встрече.'}},
-    {id: 'e5', type: 'webinar', date: '2026-12-16T18:30', seats: 80, taken: 26,
-      title: {en: 'How not to overfit the public leaderboard', ru: 'Как не переобучиться на публичный лидерборд'},
-      dur: {en: '60 minutes', ru: '60 минут'}, where: {en: 'Online', ru: 'Онлайн'},
-      speaker: {en: 'Club mentors', ru: 'Менторы клуба'},
-      about: {en: 'Validation splits, leakage and why your public score lies. With examples from past club rounds.',
-        ru: 'Валидация, утечки и почему публичный скор врёт. С примерами из прошлых соревнований клуба.'}},
-    {id: 'e3', type: 'community', date: '2026-12-19T11:00', seats: 12, taken: 7, org: 'Dana K.',
-      roles: ['NLP', {en: 'Data', ru: 'Данные'}, 'Frontend'],
-      title: {en: 'Kazakh speech commands', ru: 'Голосовые команды на казахском'},
-      dur: {en: '1 day', ru: '1 день'}, where: {en: 'On campus', ru: 'Кампус'},
-      about: {en: 'Train a small keyword model for 10 Kazakh voice commands. Needs a data person and someone to build the demo.',
-        ru: 'Обучаем небольшую модель на 10 голосовых команд на казахском. Нужен человек по данным и кто-то, кто соберёт демо.'}},
-    {id: 'e6', type: 'community', date: '2027-01-16T12:00', seats: 10, taken: 4, org: 'Timur S.',
-      roles: [{en: 'Data', ru: 'Данные'}, 'CV'],
-      title: {en: 'Bird calls of the steppe', ru: 'Голоса птиц степи'},
-      dur: {en: '2 days', ru: '2 дня'}, where: {en: 'Online', ru: 'Онлайн'},
-      about: {en: 'Classify bird species from audio spectrograms. Looking for someone to clean recordings and someone strong in CNNs.',
-        ru: 'Определяем виды птиц по спектрограммам. Ищем того, кто почистит записи, и того, кто силён в CNN.'}},
-    {id: 'e7', type: 'club', date: '2027-01-23T10:00', seats: 30, taken: 9, metric: 'MAE',
-      title: {en: 'Winter tabular cup: cafeteria queues', ru: 'Зимний табличный кубок: очереди в столовой'},
-      dur: {en: 'Sat and Sun, 48 hours', ru: 'Сб и вс, 48 часов'}, where: {en: 'On campus + Kaggle', ru: 'Кампус + Kaggle'},
-      data: {en: 'Till receipts by 15-minute slot, one semester', ru: 'Чеки кассы по 15-минутным слотам за семестр'},
-      about: {en: 'Predict how long the cafeteria queue is in each 15-minute slot. Teams of up to 3.',
-        ru: 'Предскажите длину очереди в столовой в каждом 15-минутном слоте. Команды до 3 человек.'}},
-    {id: 'e8', type: 'webinar', date: '2027-01-27T18:30', seats: 80, taken: 12,
-      title: {en: 'Transformers in 60 minutes', ru: 'Трансформеры за 60 минут'},
-      dur: {en: '60 minutes', ru: '60 минут'}, where: {en: 'Online', ru: 'Онлайн'},
-      speaker: {en: 'Club mentors', ru: 'Менторы клуба'},
-      about: {en: 'Attention, tokens and fine-tuning explained with small runnable examples.',
-        ru: 'Внимание, токены и дообучение на маленьких примерах, которые можно сразу запустить.'}}
+    {id: 'teambuilding-2026-10', type: 'meetup', date: '2026-10-09T13:00', end: '2026-10-09T15:00',
+      img: 'assets/events/team-building.jpg',
+      title: {en: 'Team-building session', ru: 'Тимбилдинг'},
+      where: {en: 'Room 4.6', ru: 'Кабинет 4.6'},
+      about: {en: 'Get to know each other better, play board games, ask about ML/AI paths and just have a good time. Snacks and drinks are on us 🐉',
+        ru: 'Знакомимся поближе, играем в настольные игры, спрашиваем про направления ML/AI и просто хорошо проводим время. Снеки и напитки — с нас 🐉'}},
+    {id: 'python-basics-2026-10', type: 'workshop', date: '2026-10-15T13:00', end: '2026-10-15T16:00',
+      cardTime: '13:00 · 15:00',
+      time: {en: '13:00–14:00 and 15:00–16:00', ru: '13:00–14:00 и 15:00–16:00'},
+      title: {en: 'Python basics workshop', ru: 'Воркшоп: основы Python'},
+      dur: {en: 'Two identical sessions, 1 hour each', ru: 'Две одинаковые сессии по 1 часу'},
+      where: {en: 'Classroom 3.6', ru: 'Аудитория 3.6'},
+      about: {en: 'Our first workshop: the team walks you through variables, operators, conditionals and functions, then gives you homework exercises to practise. Already know the basics? Feel free to skip this one ✌️',
+        ru: 'Наш первый воркшоп: команда разбирает переменные, операторы, условия и функции, а потом даёт домашние упражнения для практики. Если основы уже знаете — этот можно пропустить ✌️'}},
+    {id: 'mri-lecture-2026-11', type: 'lecture', date: '2026-11-27T15:00',
+      img: 'assets/events/mri-oxygen.jpg', speaker: {en: 'Stefano Zappala', ru: 'Стефано Заппала'},
+      title: {en: 'MRI Imaging for Oxygen Physiology', ru: 'МРТ-визуализация в физиологии кислорода'},
+      about: {en: 'Guest lecture by Stefano Zappala on MRI imaging for oxygen physiology.',
+        ru: 'Гостевая лекция Стефано Заппалы о МРТ-визуализации в физиологии кислорода.'}}
   ],
 
   // Команда: n — имя, r — роль, d — пара слов о человеке. Аватар — первая буква имени.

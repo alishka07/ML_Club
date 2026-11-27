@@ -172,3 +172,13 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .member.joined .av{background:var(--acc);color:#fff}
 .confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
 .confetti i{position:absolute;border-radius:2px;transform:translate(-50%,-50%)}
+/* real event types */
+.t-workshop .tag{background:var(--acc);color:#fff}
+.t-lecture .tag{background:var(--lav);color:var(--deep)}
+.t-meetup .tag{border:1px solid var(--acc2);color:var(--acc2)}
+/* events that already happened */
+.card.past{background:rgba(31,29,46,.75)}
+.card.past .date,.card.past h3{opacity:.8}
+.pastmark{display:inline-block;font-size:13px;font-weight:600;color:var(--mut);border:1px dashed var(--line);border-radius:999px;padding:3px 10px}
+.pastnote{color:var(--mut);margin-top:6px}
+dialog .dimg{display:block;width:100%;max-height:300px;object-fit:contain;background:var(--bg);border-radius:16px;margin:0 0 14px}

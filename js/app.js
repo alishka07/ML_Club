@@ -24,15 +24,23 @@ const taken=e=>Math.min(e.seats,e.taken+(S.reg[e.id]?1:0));
 let filter='all';
 const track=$('#track'),stage=$('#stage'),fly=$('#fly'),oarea=$('#oarea'),cv=$('#oc');
 
-const cardHTML=e=>{const d=fd(e.date),t=taken(e),inn=!!S.reg[e.id],left=e.seats-t;
- return `<article class="card t-${esc(e.type)}${inn?' in':''}" data-id="${esc(e.id)}">
- <div class="ctop"><span class="tag">${typeName(e.type)}</span><span class="when">${d.time}</span></div>
+// an event is over after its end time (or 2 hours after the start when no end is given)
+const isPast=e=>Date.now()>(e.end?new Date(e.end).getTime():new Date(e.date).getTime()+2*3600e3);
+const cardHTML=e=>{const d=fd(e.date),past=isPast(e),inn=!past&&!!S.reg[e.id],meta=[txt(e.where),txt(e.dur)].filter(Boolean);
+ let seat='';
+ if(past)seat=`<div class="seat"><span class="pastmark">${i18('card.past')}</span></div>`;
+ else if(e.seats){const t=taken(e),left=e.seats-t;seat=`<div class="seat"><div class="bar"><i style="width:${Math.round(t/e.seats*100)}%"></i></div>${left>0?i18('card.left',{left,seats:e.seats}):i18('card.full')}</div>`}
+ else seat='<div class="seat"></div>';
+ return `<article class="card t-${esc(e.type)}${inn?' in':''}${past?' past':''}" data-id="${esc(e.id)}">
+ <div class="ctop"><span class="tag">${typeName(e.type)}</span><span class="when">${esc(e.cardTime||d.time)}</span></div>
  <div class="date">${d.wd} ${d.day} ${d.mon}</div>
  <h3>${esc(txt(e.title))}</h3>
- <p class="meta">${esc(txt(e.where))}<br>${esc(txt(e.dur))}</p>
- <div class="seat"><div class="bar"><i style="width:${Math.round(t/e.seats*100)}%"></i></div>${left>0?i18('card.left',{left,seats:e.seats}):i18('card.full')}</div>
- <button class="btn" data-open="${esc(e.id)}">${i18(inn?'card.in':e.type==='community'?'card.ask':'card.join')}</button></article>`};
-const list=()=>all().filter(e=>filter==='all'||e.type===filter).sort((a,b)=>a.date<b.date?-1:1);
+ ${meta.length?`<p class="meta">${meta.map(esc).join('<br>')}</p>`:''}
+ ${seat}
+ <button class="btn" data-open="${esc(e.id)}">${i18(past?'card.details':inn?'card.in':e.type==='community'?'card.ask':'card.join')}</button></article>`};
+// upcoming events first (soonest first), then past ones (most recent first)
+const list=()=>all().filter(e=>filter==='all'||e.type===filter).sort((a,b)=>{const pa=isPast(a),pb=isPast(b);
+ return pa!==pb?(pa?1:-1):pa?(a.date<b.date?1:-1):(a.date<b.date?-1:1)});
 function render(){const L=list();track.innerHTML=L.length?L.map(cardHTML).join(''):`<p class="empty">${i18('empty')}</p>`;return[...track.querySelectorAll('.card')]}
 
 /* ---------- robot octopus ---------- */
@@ -889,19 +897,22 @@ function refreshCard(id){
 let dlgId=null;
 function openDlg(id){
  const e=byId(id);if(!e)return;dlgId=id;
- const d=fd(e.date),t=taken(e),r=S.reg[e.id],full=e.seats-t<=0;
- const facts=[[i18('d.when'),`${d.full}, ${d.time}`],[i18('d.length'),txt(e.dur)],[i18('d.where'),txt(e.where)],[i18('d.places'),full?i18('d.full'):i18('d.placesLeft',{left:e.seats-t,seats:e.seats})]];
+ const d=fd(e.date),past=isPast(e),t=taken(e),r=!past&&S.reg[e.id],full=!!e.seats&&e.seats-t<=0;
+ const facts=[[i18('d.when'),`${d.full}, ${e.time?txt(e.time):d.time}`]];
+ if(e.dur)facts.push([i18('d.length'),txt(e.dur)]);if(e.where)facts.push([i18('d.where'),txt(e.where)]);
+ if(e.seats&&!past)facts.push([i18('d.places'),full?i18('d.full'):i18('d.placesLeft',{left:e.seats-t,seats:e.seats})]);
  if(e.metric)facts.push([i18('d.metric'),txt(e.metric)]);if(e.data)facts.push([i18('d.data'),txt(e.data)]);if(e.speaker)facts.push([i18('d.speaker'),txt(e.speaker)]);
  if(e.org)facts.push([i18('d.org'),txt(e.org)]);if(e.roles&&e.roles.length)facts.push([i18('d.looking'),e.roles.map(txt).join(', ')]);
  let form='';
- if(r)form=`<p class="ok">${esc(i18('d.youreIn',{n:r.name}))}</p><button class="btn" id="unreg" style="margin-top:10px">${i18('d.cancel')}</button>`;
+ if(past)form=`<p class="pastnote">${esc(i18('d.pastNote'))}</p>`;
+ else if(r)form=`<p class="ok">${esc(i18('d.youreIn',{n:r.name}))}</p><button class="btn" id="unreg" style="margin-top:10px">${i18('d.cancel')}</button>`;
  else{
   const extra=e.type==='club'?`<div class="row"><div><label for="rl">${i18('d.level')}</label><select id="rl"><option>${i18('lvl.beg')}</option><option>${i18('lvl.mid')}</option><option>${i18('lvl.adv')}</option></select></div><div><label for="rm">${i18('d.taking')}</label><select id="rm"><option>${i18('d.solo')}</option><option>${i18('d.withTeam')}</option><option>${i18('d.match')}</option></select></div></div>`
    :e.type==='community'?`<label for="rm">${i18('d.role')}</label><select id="rm">${(e.roles&&e.roles.length?e.roles:ROLES).map(x=>`<option>${esc(txt(x))}</option>`).join('')}</select>`:'';
   form=`<form id="rform"><div class="row"><div><label for="rn">${i18('d.name')}</label><input id="rn" required maxlength="40"></div><div><label for="re">${i18('d.email')}</label><input id="re" type="email" required maxlength="80"></div></div>${extra}
   <button class="btn pri" type="submit" style="margin-top:16px">${i18(full?'d.waitlist':e.type==='community'?'d.ask':'d.register')}</button></form>`;
  }
- db.innerHTML=`<div class="t-${esc(e.type)}"><span class="tag">${typeName(e.type)}</span></div><h2 style="margin:12px 44px 0 0;font-size:26px">${esc(txt(e.title))}</h2>
+ db.innerHTML=`${e.img?`<img class="dimg" src="${esc(e.img)}" alt="">`:''}<div class="t-${esc(e.type)}"><span class="tag">${typeName(e.type)}</span></div><h2 style="margin:12px 44px 0 0;font-size:26px">${esc(txt(e.title))}</h2>
  <p class="lead">${esc(txt(e.about))}</p><dl class="facts">${facts.map(f=>`<dt>${f[0]}</dt><dd>${esc(f[1])}</dd>`).join('')}</dl>${form}`;
  const rf=$('#rform');
  if(rf)rf.addEventListener('submit',ev=>{ev.preventDefault();S.reg[e.id]={name:$('#rn').value.trim(),email:$('#re').value.trim(),role:$('#rm')?$('#rm').value:'',level:$('#rl')?$('#rl').value:''};save();refreshCard(e.id);openDlg(e.id)});

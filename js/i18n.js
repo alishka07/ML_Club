@@ -7,11 +7,15 @@ window.I18N = {
   en: {
     'lang.switch': 'RU', 'lang.switchLabel': 'Русская версия',
     'nav.events': 'Events', 'nav.team': 'Team', 'nav.join': 'Join the team',
-    'f.label': 'Filter events', 'f.all': 'All', 'f.club': 'Hackathons', 'f.webinar': 'Webinars', 'f.community': 'Student-run',
+    'f.label': 'Filter events', 'f.all': 'All', 'f.workshop': 'Workshops', 'f.lecture': 'Lectures', 'f.meetup': 'Meetups',
+    'f.club': 'Hackathons', 'f.webinar': 'Webinars', 'f.community': 'Student-run',
     'shuffle': 'Shuffle again', 'prev': 'Previous events', 'next': 'Next events', 'skip': 'Skip',
     'track': 'Upcoming events, scroll sideways',
     'hint': 'Tap <b>Events</b> at the top. The octopus will pull them out.',
     'type.club': 'Club hackathon', 'type.webinar': 'Webinar', 'type.community': 'Student-run',
+    'type.workshop': 'Workshop', 'type.lecture': 'Guest lecture', 'type.meetup': 'Meetup',
+    'card.past': 'Already happened', 'card.details': 'Details',
+    'd.pastNote': 'This event has already taken place. Follow our Instagram so you don’t miss the next one.',
     'card.left': '{left} of {seats} places left', 'card.full': 'Full, waiting list open',
     'card.join': 'Join', 'card.ask': 'Ask to join', 'card.in': "You're in",
     'empty': 'Nothing of this type yet. Run one below.',
@@ -46,16 +50,20 @@ window.I18N = {
     'join.morePh': 'Skills, ideas for events, links to your projects', 'join.submit': 'Join the team',
     'join.ok': 'Got it, {n}. In this prototype your application is saved in this browser only.',
     'foot.place': 'CU ML Club, Cardiff University Kazakhstan, Astana',
-    'foot.note': 'Prototype. Events and names are sample data. Forms are saved only in this browser.'
+    'foot.note': 'Prototype. Team names are sample data. Forms are saved only in this browser.'
   },
   ru: {
     'lang.switch': 'EN', 'lang.switchLabel': 'English version',
     'nav.events': 'События', 'nav.team': 'Команда', 'nav.join': 'Вступить',
-    'f.label': 'Фильтр событий', 'f.all': 'Все', 'f.club': 'Хакатоны', 'f.webinar': 'Вебинары', 'f.community': 'Студенческие',
+    'f.label': 'Фильтр событий', 'f.all': 'Все', 'f.workshop': 'Воркшопы', 'f.lecture': 'Лекции', 'f.meetup': 'Встречи',
+    'f.club': 'Хакатоны', 'f.webinar': 'Вебинары', 'f.community': 'Студенческие',
     'shuffle': 'Перемешать', 'prev': 'Предыдущие события', 'next': 'Следующие события', 'skip': 'Пропустить',
     'track': 'Ближайшие события, листайте вбок',
     'hint': 'Нажмите <b>События</b> наверху. Осьминог их достанет.',
     'type.club': 'Хакатон клуба', 'type.webinar': 'Вебинар', 'type.community': 'Студенческий',
+    'type.workshop': 'Воркшоп', 'type.lecture': 'Гостевая лекция', 'type.meetup': 'Встреча',
+    'card.past': 'Уже прошло', 'card.details': 'Подробнее',
+    'd.pastNote': 'Это событие уже прошло. Следите за нашим Instagram, чтобы не пропустить следующее.',
     'card.left': 'Осталось {left} из {seats} мест', 'card.full': 'Мест нет, есть лист ожидания',
     'card.join': 'Участвовать', 'card.ask': 'Попроситься', 'card.in': 'Вы участвуете',
     'empty': 'Таких событий пока нет. Предложите своё ниже.',
@@ -90,6 +98,6 @@ window.I18N = {
     'join.morePh': 'Навыки, идеи для событий, ссылки на ваши проекты', 'join.submit': 'Вступить',
     'join.ok': 'Принято, {n}. В этом прототипе заявка сохраняется только в вашем браузере.',
     'foot.place': 'CU ML Club, Cardiff University Kazakhstan, Астана',
-    'foot.note': 'Прототип. События и имена — примеры. Формы сохраняются только в этом браузере.'
+    'foot.note': 'Прототип. Имена в команде — примеры. Формы сохраняются только в этом браузере.'
   }
 };
