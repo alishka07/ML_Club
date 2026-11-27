@@ -207,6 +207,7 @@ function place(j,x,y,r,s){j.cl.style.transform=`translate(${(x-j.cw/2).toFixed(1
 function setPressed(f){chips.querySelectorAll('[data-f]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.f===f)))}
 function rel(el){const r=el.getBoundingClientRect(),s=stage.getBoundingClientRect();return{x:r.left-s.left+r.width/2,y:r.top-s.top+r.height/2}}
 function skip(){
+ stopPush();
  if(cjobs.length){finishCollect();return}
  if(pull){pull.chip.style.transform='';pull.tn.job=null;filter=pull.chip.dataset.f;setPressed(filter);pull=null;render();dealt=true}
  jobs.forEach(j=>{j.c.classList.remove('wait');j.cl.remove();if(j.tn)j.tn.job=null});jobs=[];fly.innerHTML='';showSkip();
@@ -291,10 +292,43 @@ function updateJobs(now){
    tn.w=1-ease(cl01(e/RL));if(e>=RL){tn.job=null;j.st=3}
   }
  }
- if(jobs.length&&done===jobs.length){jobs=[];showSkip();bar2.classList.add('on');liftT=1;backT=setTimeout(()=>track.scrollTo({left:0,behavior:'smooth'}),500)}
+ if(jobs.length&&done===jobs.length){jobs=[];showSkip();bar2.classList.add('on');liftT=1;backT=setTimeout(startPush,350)}
+}
+/* ---------- after a deal: one arm shoves the shelf back to the first card ---------- */
+let push=null;
+// the card the arm leans on: the rightmost one whose left edge is still in the left part of the stage
+function pushCard(){let best=null;for(const c of track.querySelectorAll('.card:not(.wait)')){const r=c.getBoundingClientRect(),x=r.left-SR.left;if(x>W*0.04&&x<W*0.7)best={x,y:r.top-SR.top+10}}return best}
+function startPush(){
+ if(!GL||RM||push||pull||jobs.length||cjobs.length||curtain)return;
+ const s0=track.scrollLeft;if(s0<4)return;
+ SR=stage.getBoundingClientRect();const p=pushCard()||{x:W*0.3,y:OH*0.8};
+ const tn=pickTN(p.x);if(!tn){track.scrollTo({left:0,behavior:'smooth'});return}
+ push={tn,st:1,ts:performance.now(),lt:performance.now(),s0,dur:Math.max(700,Math.min(1600,s0*0.9)),x:p.x,y:p.y,tx:p.x};
+ tn.job=push;track.style.scrollSnapType='none';
+}
+function stopPush(){
+ if(!push)return;
+ if(push.st<3)track.scrollLeft=0;
+ push.tn.job=null;push=null;track.style.scrollSnapType='';
+}
+function updatePush(now){
+ if(!push)return;
+ const P0=push,e=now-P0.ts,tn=P0.tn,dt=Math.min(0.05,(now-P0.lt)/1000);P0.lt=now;
+ const aim=()=>{const p=pushCard();if(p){const k=Math.min(1,dt*14);P0.x+=(p.x-P0.x)*k;P0.y+=(p.y-P0.y)*k}P0.tx=P0.x;tn.tgt.copy(toW(P0.x-4,P0.y,ZP()))};
+ if(P0.st===1){ // reach for the edge of a card
+  const u=cl01(e/420);tn.w=Math.max(tn.w,ease(u));aim();
+  if(u>=1){P0.st=2;P0.ts=now}
+ }else if(P0.st===2){ // shove: the shelf slides back while the arm keeps leaning on a card
+  const u=cl01(e/P0.dur),k=u<.5?2*u*u:1-Math.pow(-2*u+2,2)/2;
+  track.scrollLeft=P0.s0*(1-k);tn.w=1;aim();
+  if(u>=1){track.scrollLeft=0;track.style.scrollSnapType='';P0.st=3;P0.ts=now}
+ }else{ // let go
+  tn.w=1-ease(cl01(e/RL));if(e>=RL){tn.job=null;push=null}
+ }
 }
 /* ---------- Team: collect the cards back, pull Team, close the scene ---------- */
 function collect(after,only){
+ stopPush();
  const cards=only||[...track.querySelectorAll('.card:not(.wait)')];
  bar2.classList.remove('on');liftT=0;
  if(!cards.length){after();return}
@@ -373,7 +407,7 @@ let last=performance.now(),tt=0,vis=true;
 function frame(now){
  requestAnimationFrame(frame);
  const dt=Math.min(0.05,(now-last)/1000);last=now;
- if(!vis&&!jobs.length&&!pull&&!curtain&&introDone)return;
+ if(!vis&&!jobs.length&&!pull&&!push&&!curtain&&introDone)return;
  if(introS===null)introS=now;
  tt+=RM?0:dt;
  SR=stage.getBoundingClientRect();
@@ -397,6 +431,7 @@ function frame(now){
  let sx=0,n=0;for(const j of jobs)if(j.st===1||j.st===2){sx+=j.tx;n++}
  for(const j of cjobs)if(j.st===1||j.st===2){sx+=j.tx;n++}
  if(pull){sx+=pull.tx;n++}
+ if(push&&push.st<3){sx+=push.tx;n++}
  const dp=n?Math.max(-W*0.22,Math.min(W*0.22,(sx/n-W/2)*0.45)):0;
  drift+=(dp-drift)*Math.min(1,dt*2.2);
  const hw=toW(px+drift,py,0);
@@ -404,7 +439,7 @@ function frame(now){
  oct.rotation.x=0.3*stand;oct.rotation.z=rot-drift/ppu*0.04;
  mg.rotation.z=Math.sin(tt*0.9)*0.03;
  oct.updateMatrixWorld(true);
- updatePull(now);updateJobs(now);updateCollect(now);updateCurtain(now);
+ updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);
  for(const tn of TN){
   poseStand(tn,poseT);
   if(stand<1){poseSwim(tn,tt,pulse);for(let j=0;j<=N;j++)tn.fk[j].lerpVectors(tn.fkW[j],tn.fkS[j],stand)}
@@ -444,7 +479,7 @@ if(!GL||RM){
 let fseq=0;
 function applyFilter(f){
  if(pull||cjobs.length||curtain)return;
- if(jobs.length)skip();
+ if(jobs.length||push)skip();
  if(f===filter&&f!=='all')f='all';
  if(f===filter)return;
  filter=f;setPressed(f);
@@ -489,7 +524,7 @@ document.querySelector('.brand').addEventListener('click',e=>{e.preventDefault()
 const navTeam=document.querySelector('.links a[href="#team"]');
 navTeam.addEventListener('click',e=>{
  if(!GL||RM||window.scrollY>40||!introDone||curtain||pull||cjobs.length)return;
- e.preventDefault();if(jobs.length)skip();
+ e.preventDefault();if(jobs.length||push)skip();
  const go=()=>startPull(navTeam,()=>startCurtain());
  if(dealt)collect(()=>{dealt=false;shint.hidden=false;navEv.classList.add('pulse');go()});else go();
 });
