@@ -167,3 +167,8 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .member.ghost.docked{border-style:solid;background:var(--s2);box-shadow:0 0 0 1px var(--acc2),0 10px 30px rgba(124,92,255,.3)}
 .dock{max-width:100%;margin:0 0 6px;border:1.5px dashed var(--line);border-radius:20px;display:grid;place-items:center;color:var(--mut);font-size:14px;text-align:center;padding:8px}
 .dock[hidden]{display:none}
+/* you, after joining: a real member of the team */
+.member.joined{border-color:var(--acc2);background:linear-gradient(160deg,rgba(91,76,240,.22),var(--s1) 60%)}
+.member.joined .av{background:var(--acc);color:#fff}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.confetti i{position:absolute;border-radius:2px;transform:translate(-50%,-50%)}

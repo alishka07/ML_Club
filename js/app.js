@@ -112,7 +112,7 @@ function initGL(){
  const boltG=new THREE.SphereGeometry(.03,8,6);
  for(let i=0;i<28;i++){const a=i/28*Math.PI*2;if(Math.abs(Math.sin(a/2))<.2)continue;mg.add(mesh(boltG,M.seam,Math.sin(a)*1.03,-.2,Math.cos(a)*1.03))}
  mg.add(mesh(new THREE.CylinderGeometry(.92,.7,.3,48),M.dark,0,-.6,0));
- const eye=new THREE.Group();eye.position.set(0,-.12,1.0);mg.add(eye);
+ const eye=new THREE.Group();eye.position.set(0,-.12,1.0);mg.add(eye);eyeG=eye;
  const hous=mesh(new THREE.CylinderGeometry(.6,.64,.4,48),M.body);hous.rotation.x=Math.PI/2;eye.add(hous);
  eye.add(mesh(new THREE.TorusGeometry(.52,.06,12,48),M.seam,0,0,.2));
  eye.add(mesh(new THREE.TorusGeometry(.45,.045,12,48),M.led,0,0,.22));
@@ -205,7 +205,7 @@ function writeTN(tn){
 
 /* ---------- jobs: pull the button, deal, sort ---------- */
 let cjobs=[],collectAfter=null,curtain=null,curtainEl=null,needIntro=false,lift=0,liftT=0,poseT=0;
-let teamQ=false,jobs=[],pull=null,backT=null,pending=null,introS=null,introDone=false,rotEnd=0;
+let eyeG=null,peckT=-1e9,flareT=-1e9,teamQ=false,jobs=[],pull=null,backT=null,pending=null,introS=null,introDone=false,rotEnd=0;
 const ease=u=>u<.5?4*u*u*u:1-Math.pow(-2*u+2,3)/2;
 const outBack=u=>{const c=1.6,v=u-1;return 1+(c+1)*v*v*v+c*v*v};
 const cl01=u=>Math.max(0,Math.min(1,u));
@@ -492,7 +492,7 @@ const ghostEl=()=>document.getElementById('ghost');
 function perch2(){const d=dock.getBoundingClientRect(),P=perch();return{x:d.left+d.width/2-SR.left,y:d.top-SR.top-1.3*P.s*ppu,s:P.s}}
 // the card's path: from its place in the team list into the dock; returns where its top-centre handle is
 function placeGhost(){
- const g=ghostEl();if(!g||!dock||dock.hidden)return null;
+ const g=ghostEl();if(!g||!dock||dock.hidden||g.classList.contains('joined'))return null;
  const q=cp-2,e=sm((q-0.25)/0.65);
  if(q<=0){if(gT.x||gT.y||gT.r){gT={x:0,y:0,r:0};g.style.transform='';g.classList.remove('carried','docked')}}
  else{
@@ -521,9 +521,10 @@ function updateCrawl(dt,now){
  if(!inLogo&&cp>=0.985&&cp<=1.015){inLogo=true;inT=now;aboutPic.classList.remove('vacant','merge');void aboutPic.offsetWidth;aboutPic.classList.add('merge')}
  else if(inLogo&&(cp<0.95||cp>1.05)){inLogo=false;aboutPic.classList.add('vacant');oct.visible=true}
  if(inLogo&&now-inT>950)oct.visible=false;
- glowB=inLogo?Math.max(0,1-(now-inT)/800):lq*0.35;
+ glowB=Math.max(inLogo?Math.max(0,1-(now-inT)/800):lq*0.35,Math.max(0,1-(now-peckT)/260)*0.6,Math.max(0,1-(now-flareT)/1200)*1.2);
  // while crawling he goes over the event cards (at home the cards sit in front of his legs)
  if(!curtain){const z=cp>0.02?'5':'';if(cv.style.zIndex!==z)cv.style.zIndex=z}
+ if(joining&&cp<=2.0005)finishJoin();
  if(prev>0&&cp===0){oct.scale.setScalar(sc);onHome()}
 }
 function crawlPose(now){
@@ -567,13 +568,7 @@ function updateFeet(now,dt,bx,by){
   const la=LOGO.arms.map(a=>{const m=a[Math.floor(a.length/2)];return{a,ang:ang(Math.atan2(m[1]-LOGO.eye[1],m[0]-LOGO.eye[0]))}}).sort((x,y)=>x.ang-y.ang);
   [...feet].sort((a,b)=>ang(a.a)-ang(b.a)).forEach((f,i)=>{f.arm=la[i].a;f.logo=f.arm[f.arm.length-1];
    let c=0;f.fr=[0].concat(f.tn.lens.map(l=>c+=l)).map(v=>v/c)}); // where each joint sits along the arm
-  // one arm per team member: members in angular order seen from the perch, each takes the free arm
-  // pointing closest to it; the spare arms keep holding on to the page
-  if(teamList){const P=perch(),used=new Set();
-   [...members()].map((m,i)=>{const a=avatarAt(i);return{i,ang:ang(Math.atan2(a.y-P.y,a.x-P.x))}}).sort((x,y)=>x.ang-y.ang)
-    .forEach(m=>{let best=null,bd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-m.ang);if(d<bd){bd=d;best=f}}
-     if(best){used.add(best);best.mem=m.i;best.order=m.i}});
-   let hb=null,hd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-90);if(d<hd){hd=d;hb=f}}if(hb)hb.hold=true}
+  assignMembers();
   feetFresh=false;
   lastBody={x:bx,y:by};bodyV={x:0,y:0};
  }
@@ -587,7 +582,9 @@ function updateFeet(now,dt,bx,by){
  for(const f of feet)if(f.mem!=null){f.pw=sm((q-0.6-0.045*f.order)/0.12)*unplug}else f.pw=0;
  const hw=sm((cp-2.05)/0.2),handle=placeGhost();
  for(const f of feet)f.hw=f.hold&&handle?hw:0;
- const ms=members();for(const f of feet)if(f.mem!=null&&ms[f.mem])ms[f.mem].classList.toggle('linked',f.pw>0.95);
+ const ms=members();for(const f of feet)if(f.mem!=null&&ms[f.mem]){const on=f.pw>0.95;
+  if(on&&f.mem===celebrate&&!ms[f.mem].classList.contains('linked')){celebrate=-1;flareT=now;confetti(ms[f.mem].querySelector('.av'))}
+  ms[f.mem].classList.toggle('linked',on)}
  const cand=feet.filter(f=>!f.st&&f.pw<0.1&&!(f.hw>0.1)).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
  for(const c of cand){
   if(lq>0.3||stepping>=maxStep||c.e<R*0.45)break;
@@ -616,6 +613,87 @@ function updateFeet(now,dt,bx,by){
   }
   tn.tgt.copy(toW(x,y,z));
  }
+}
+// one arm per team member: members in angular order seen from the perch, each takes the free arm
+// pointing closest to it; one spare arm (pointing most downwards) carries the free-spot card
+function assignMembers(){
+ if(!feet||!teamList)return;
+ const ang=a=>{let d=a*180/Math.PI;return d<-90?d+360:d},P=perch(),used=new Set();
+ feet.forEach(f=>{f.mem=null;f.order=0;f.hold=false});
+ [...members()].map((m,i)=>{const a=avatarAt(i);return{i,ang:ang(Math.atan2(a.y-P.y,a.x-P.x))}}).sort((x,y)=>x.ang-y.ang)
+  .forEach(m=>{let best=null,bd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-m.ang);if(d<bd){bd=d;best=f}}
+   if(best){used.add(best);best.mem=m.i;best.order=m.i}});
+ let hb=null,hd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-90);if(d<hd){hd=d;hb=f}}if(hb)hb.hold=true;
+}
+/* ---------- he watches you fill in the form ---------- */
+// The eye turns to the field you are filling in (to the text cursor in text fields), or follows the
+// pointer over the form; the head leans the same way; each keystroke gets a little nod and a blink of
+// light. With nothing to watch he glances around now and then.
+const jform=document.getElementById('jform');let ptr=null,lookA={y:0,x:0},glance={t:0,x:0,y:0};
+const mctx=document.createElement('canvas').getContext('2d');
+function caretPoint(el){
+ const r=el.getBoundingClientRect();let x=r.left+r.width/2,y=r.top+r.height/2;
+ if(el.matches('input[type=text],input[type=email],input:not([type])')){
+  mctx.font=getComputedStyle(el).font;x=Math.min(r.right-10,r.left+12+mctx.measureText(el.value).width)}
+ else if(el.tagName==='TEXTAREA'){const lines=el.value.split('\n'),last=lines[lines.length-1];mctx.font=getComputedStyle(el).font;
+  x=Math.min(r.right-10,r.left+12+mctx.measureText(last).width%Math.max(1,r.width-24));y=Math.min(r.bottom-10,r.top+18+(lines.length-1)*22)}
+ return{x,y};
+}
+function updateLook(now,dt){
+ if(!eyeG)return;
+ let tx=null,ty=null;
+ const atForm=cp>2.6&&oct.visible,ae=document.activeElement;
+ if(atForm&&ae&&jform.contains(ae)&&ae!==jform&&ae.tagName!=='BUTTON'){const c=caretPoint(ae);tx=c.x;ty=c.y}
+ else if(atForm&&ptr&&now-ptr.t<2500){tx=ptr.x;ty=ptr.y}
+ let yaw=0,pitch=0;
+ if(tx!=null){
+  W3.set(0,0,0);eyeG.localToWorld(W3);const e=toS(W3),dx=tx-(e.x+SR.left),dy=ty-(e.y+SR.top);
+  yaw=Math.max(-0.7,Math.min(0.7,Math.atan2(dx,420)));pitch=Math.max(-0.6,Math.min(0.6,Math.atan2(dy,420)));
+ }else{ // idle glances
+  if(now>glance.t){glance={t:now+1800+Math.random()*2600,x:(Math.random()-0.5)*0.7,y:(Math.random()-0.5)*0.4}}
+  if(cp>0.02&&!inLogo){yaw=glance.x;pitch=glance.y}
+ }
+ const k=Math.min(1,dt*9);lookA.y+=(yaw-lookA.y)*k;lookA.x+=(pitch-lookA.x)*k;
+ eyeG.rotation.set(lookA.x,lookA.y,0);
+ const nod=Math.max(0,1-(now-peckT)/220);
+ mg.rotation.z+=-lookA.y*0.18;mg.rotation.x=lookA.x*0.12+nod*0.12;mg.position.y=nod*0.1;
+}
+if(jform){
+ jform.addEventListener('pointermove',e=>{ptr={x:e.clientX,y:e.clientY,t:performance.now()}});
+ jform.addEventListener('pointerleave',()=>{ptr=null});
+ jform.addEventListener('input',()=>{peckT=performance.now()});
+}
+/* ---------- after sending the form: he carries your card up into the team ---------- */
+let joining=false,celebrate=-1;
+function startJoin(){
+ const g=ghostEl();if(!g)return;
+ if(!GL||RM||!dock||dock.hidden||cp<2.5){finishJoin();return}
+ joining=true;flareT=performance.now();
+ // scroll up to the team: the octopus carries the card back the way it came
+ setTimeout(()=>{const r=teamList.getBoundingClientRect();
+  window.scrollTo({top:Math.max(0,r.top+scrollY+r.height/2-innerHeight*0.55),behavior:'smooth'})},450);
+}
+function finishJoin(){
+ joining=false;const g=ghostEl();if(!g)return;
+ gT={x:0,y:0,r:0};g.style.transform='';g.classList.remove('ghost','carried','docked');g.classList.add('joined');
+ updateGhost();
+ if(feet){assignMembers();celebrate=members().length-1}
+ else setTimeout(()=>confetti(g.querySelector('.av')),300);
+}
+function confetti(el){
+ if(!el||RM)return;
+ const r=el.getBoundingClientRect(),x0=r.left+r.width/2,y0=r.top+r.height/2,box=document.createElement('div');
+ box.className='confetti';document.body.appendChild(box);
+ const C=['#5b4cf0','#9a92f7','#e4e2f4','#7c5cff','#b9a6ff'];
+ for(let i=0;i<34;i++){
+  const s=document.createElement('i'),a=Math.random()*Math.PI*2,d=70+Math.random()*170,w=5+Math.random()*6;
+  s.style.cssText=`left:${x0}px;top:${y0}px;width:${w}px;height:${w*0.6}px;background:${C[i%C.length]}`;box.appendChild(s);
+  s.animate([{transform:'translate(-50%,-50%) rotate(0deg)',opacity:1},
+   {transform:`translate(${Math.cos(a)*d}px,${Math.sin(a)*d*0.7-40}px) rotate(${Math.random()*540}deg)`,opacity:1,offset:0.55},
+   {transform:`translate(${Math.cos(a)*d*1.15}px,${Math.sin(a)*d*0.7+90}px) rotate(${Math.random()*900}deg)`,opacity:0}],
+   {duration:1200+Math.random()*500,easing:'cubic-bezier(.2,.7,.4,1)',fill:'forwards'});
+ }
+ setTimeout(()=>box.remove(),1900);
 }
 function onHome(){if(teamQ){teamQ=false;pending=null;runTeam();return}if(pending){const p=pending;pending=null;startPull(p)}}
 function onIntroDone(){introDone=true;if(teamQ){teamQ=false;pending=null;runTeam();return}if(!dealt)navEv.classList.add('pulse');if(pending){const p=pending;pending=null;startPull(p)}}
@@ -657,7 +735,7 @@ function frame(now){
  const hw=toW(px+drift,py,0);
  oct.position.set(hw.x,hw.y+(stand>=1&&cp===0?Math.sin(tt*1.1)*0.06*sc:0),0);
  oct.rotation.x=0.3*stand*(1-lq);oct.rotation.z=rot-drift/ppu*0.04;
- mg.rotation.z=Math.sin(tt*0.9)*0.03;
+ mg.rotation.z=Math.sin(tt*0.9)*0.03;updateLook(now,dt);
  oct.updateMatrixWorld(true);
  updatePull(now);updatePush(now);updateJobs(now);updateCollect(now);updateCurtain(now);updateFeet(now,dt,px+drift,py);
  for(const tn of TN){
@@ -824,14 +902,16 @@ const TEAM=CLUB.team;
 const renderTeam=()=>{$('#teamList').innerHTML=TEAM.map(m=>{const n=txt(m.n);return `<div class="member"><div class="av">${esc(n.charAt(0))}</div><div><b>${esc(n)}</b><span>${esc(txt(m.r))}</span></div><p>${esc(txt(m.d))}</p></div>`}).join('')+ghostHTML();gT={x:0,y:0,r:0};updateGhost();sizeDock()};
 renderTeam();
 // the "free spot" card: the octopus carries it into the join form, and it fills in as you type
-function ghostHTML(){return `<div class="member ghost" id="ghost"><div class="av" id="gAv">?</div><div><b id="gName"></b><span id="gRole"></span></div><p id="gDesc"></p></div>`}
+function ghostHTML(){return `<div class="member ${S.join?'joined':'ghost'}" id="ghost"><div class="av" id="gAv">?</div><div><b id="gName"></b><span id="gRole"></span></div><p id="gDesc"></p></div>`}
 function updateGhost(){
  const g=document.getElementById('ghost');if(!g)return;
- const n=(($('#jn')||{}).value||'').trim()||(S.join&&S.join.name)||'',roles=[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value);
+ const joined=g.classList.contains('joined'),typed=(($('#jn')||{}).value||'').trim();
+ const n=joined?S.join.name:typed,roles=joined?(S.join.help||[]):[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value);
  $('#gAv').textContent=n?n.charAt(0).toUpperCase():'?';$('#gName').textContent=n||i18('ghost.name');
  $('#gRole').textContent=roles.length?roles.join(', '):i18('ghost.role');
- $('#gDesc').textContent=S.join&&!$('#jn').value?i18('ghost.welcome'):i18('ghost.desc');
+ $('#gDesc').textContent=joined||joining?i18('ghost.welcome'):i18('ghost.desc');
  g.classList.toggle('filled',!!n);
+ const ds=dock&&dock.querySelector('span');if(ds)ds.textContent=i18(joined?'dock.joined':'dock.label');
 }
 function sizeDock(){const g=document.getElementById('ghost');if(!dock||!g)return;dock.style.width=g.offsetWidth+'px';
  dock.style.height=Math.round(g.offsetHeight*Math.min(1,dock.offsetWidth/g.offsetWidth))+'px'}
@@ -843,9 +923,15 @@ renderHelp();
 $('#jform').addEventListener('submit',e=>{
  e.preventDefault();const n=$('#jn').value.trim();if(!n)return;
  S.join={name:n,email:$('#je').value.trim(),year:$('#jy').value,level:$('#jl').value,help:[...document.querySelectorAll('#jroles input:checked')].map(x=>x.value),note:$('#jm').value.trim()};save();
- e.target.reset();$('#jok').textContent=i18('join.ok',{n});updateGhost();
+ const g=document.getElementById('ghost'),first=g&&!g.classList.contains('joined');
+ if(first){ // freeze the card with what was typed, then send it up to the team
+  $('#gName').textContent=n;$('#gAv').textContent=n.charAt(0).toUpperCase();
+  $('#gRole').textContent=S.join.help.length?S.join.help.join(', '):i18('ghost.role');$('#gDesc').textContent=i18('ghost.welcome');
+ }
+ e.target.reset();$('#jok').textContent=i18('join.ok',{n});
+ if(first)startJoin();else updateGhost();
 });
-$('#jform').addEventListener('input',updateGhost);$('#jform').addEventListener('change',updateGhost);
+$('#jform').addEventListener('input',()=>{if(!joining)updateGhost()});$('#jform').addEventListener('change',()=>{if(!joining)updateGhost()});
 addEventListener('resize',sizeDock);
 
 /* ---------- language switch ---------- */
