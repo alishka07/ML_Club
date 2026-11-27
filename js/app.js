@@ -448,24 +448,54 @@ function logoAnchor(){ // the picture itself (the frame is tilted 2deg, so take 
  return{x:r.left+T*LOGO.eye[0]-SR.left,y:r.top+T*LOGO.eye[1]-SR.top,s:LOGO.eyeR*T/(0.6*ppu),T,l:r.left-SR.left,t:r.top-SR.top};
 }
 // 0: on the shelf (the whole stage still on screen), 1: in the picture (frame a bit below mid-screen)
+// 0..1: shelf -> logo picture; 1..2: logo -> perched by the team, arms plugged into the members
 function crawlTarget(){
- const B=logoAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55);
- return cl01((-SR.top-s0)/(s1-s0));
+ const B=logoAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55),y=-SR.top;
+ if(y<=s1||!teamList)return cl01((y-s0)/(s1-s0));
+ const s1b=s1+VH*0.3,s2=Math.max(s1b+200,perch().gy-VH*0.55); // he rests in the logo for a while first
+ return y<=s1b?1:1+cl01((y-s1b)/(s2-s1b));
 }
+/* ---------- About -> Team: he climbs out of the logo, crawls to the team and plugs an arm into each member ---------- */
+const teamList=document.getElementById('teamList');
+// where he sits: in the free space to the right of the "Team" heading
+const teamH=document.querySelector('#team h2');
+function perch(){
+ const g=teamList.getBoundingClientRect(),h=teamH.getBoundingClientRect(),l=g.left-SR.left,t=g.top-SR.top,hy=h.top+h.height/2-SR.top;
+ return W<700?{x:l+g.width-48,y:hy,s:sc*0.8,gy:t+g.height*0.5}
+             :{x:l+g.width*0.62,y:hy+10,s:sc*0.7,gy:t+g.height*0.5};
+}
+// The cable an arm lays to a member's avatar, kept off the text: from the body down to the gap above the
+// first row of cards (via the right margin on phones), along that gap, down the left margin for lower
+// rows, then into the avatar. Corners are rounded.
+function cableRoute(i,r0){
+ const cards=members(),c=cards[i],a=avatarAt(i);if(!c||!a)return null;
+ const g=teamList.getBoundingClientRect(),gl=g.left-SR.left-8,gr=g.right-SR.left+7,cr=c.getBoundingClientRect();
+ const y0=cards[0].getBoundingClientRect().top-SR.top-12,ct=cr.top-SR.top,row0=ct<=y0+20,o=(i%3)*3;
+ let pts;
+ if(W<700)pts=[[r0.x,r0.y],[gr-o,r0.y+14],[gr-o,y0-o],[gl+o,y0-o],[gl+o,a.y],[a.x,a.y]];
+ else if(row0)pts=[[r0.x,r0.y],[r0.x,y0-o],[a.x,y0-o],[a.x,a.y]];
+ else pts=[[r0.x,r0.y],[r0.x,y0-o],[gl+o,y0-o],[gl+o,ct-8],[a.x,ct-8],[a.x,a.y]];
+ for(let k=0;k<3;k++){const q=[pts[0]];for(let j=0;j<pts.length-1;j++){const A=pts[j],B=pts[j+1];
+  q.push([A[0]*0.75+B[0]*0.25,A[1]*0.75+B[1]*0.25],[A[0]*0.25+B[0]*0.75,A[1]*0.25+B[1]*0.75])}q.push(pts[pts.length-1]);pts=q}
+ return pts;
+}
+function avatarAt(i){const a=teamList.querySelectorAll('.member .av')[i];if(!a)return null;const r=a.getBoundingClientRect();return{x:r.left+r.width/2-SR.left,y:r.top+r.height/2-SR.top}}
+const members=()=>teamList.querySelectorAll('.member');
 function updateCrawl(dt,now){
  if(!aboutPic||!GL||RM)return;
  const tg=crawlTarget();
  if(needIntro){ // after the Team curtain the page is below the logo: he is already inside the picture
   if(tg<0.99)return;
-  needIntro=false;introDone=true;cp=1;lq=1;inLogo=true;inT=-1e9;oct.visible=false;aboutPic.classList.remove('vacant');
+  needIntro=false;introDone=true;cp=tg;inT=-1e9;feetFresh=true;
+  if(Math.abs(tg-1)<0.015){lq=1;inLogo=true;oct.visible=false;aboutPic.classList.remove('vacant')}else{inLogo=false;oct.visible=true}
  }
  const busy=jobs.length||pull||cjobs.length||curtain||push||!introDone;
  const prev=cp,goal=busy?0:tg;
  cp+=(goal-cp)*Math.min(1,dt*5);if(Math.abs(goal-cp)<0.002)cp=goal;
  crawlV=crawlV*0.85+0.15*Math.abs(cp-prev)/Math.max(dt,1e-3);
- lq=cl01((cp-0.8)/0.18);lq=lq*lq*(3-2*lq);
- if(!inLogo&&cp>=0.985){inLogo=true;inT=now;aboutPic.classList.remove('vacant','merge');void aboutPic.offsetWidth;aboutPic.classList.add('merge')}
- else if(inLogo&&cp<0.95){inLogo=false;aboutPic.classList.add('vacant');oct.visible=true}
+ lq=cp<=1?cl01((cp-0.8)/0.18):cl01(1-(cp-1)/0.18);lq=lq*lq*(3-2*lq);
+ if(!inLogo&&cp>=0.985&&cp<=1.015){inLogo=true;inT=now;aboutPic.classList.remove('vacant','merge');void aboutPic.offsetWidth;aboutPic.classList.add('merge')}
+ else if(inLogo&&(cp<0.95||cp>1.05)){inLogo=false;aboutPic.classList.add('vacant');oct.visible=true}
  if(inLogo&&now-inT>950)oct.visible=false;
  glowB=inLogo?Math.max(0,1-(now-inT)/800):lq*0.35;
  // while crawling he goes over the event cards (at home the cards sit in front of his legs)
@@ -473,6 +503,13 @@ function updateCrawl(dt,now){
  if(prev>0&&cp===0){oct.scale.setScalar(sc);onHome()}
 }
 function crawlPose(now){
+ if(cp>1){ // logo -> perch by the team
+  const L=logoAnchor(),P=perch(),q=cp-1,k=q*q*(3-2*q),amp=W*0.12;
+  const x=L.x+(P.x-L.x)*q+Math.sin(q*Math.PI*2)*amp,y=L.y+(P.y-L.y)*q;
+  const dx=(P.x-L.x)+Math.cos(q*Math.PI*2)*Math.PI*2*amp,dy=P.y-L.y;
+  const ang=Math.max(-0.8,Math.min(0.8,Math.atan2(dx,Math.abs(dy)+1))),m=Math.sin(Math.PI*q),s=L.s+(P.s-L.s)*k;
+  return{x:x+(L.x-x)*lq,y:y+(L.y-y)*lq+Math.sin(now*0.011)*Math.min(1,crawlV*3)*s*ppu*0.12*(1-lq),s,rot:-ang*m*0.35*(1-lq)+LOGO.lean*lq,stand:1,pulse:0};
+ }
  const A=homeAnchor(),B=logoAnchor(),p=cp,k=p*p*(3-2*p),amp=W*0.16;
  const x=A.x+(B.x-A.x)*p+Math.sin(p*Math.PI*2)*amp,y=A.y+(B.y-A.y)*p;
  const dx=(B.x-A.x)+Math.cos(p*Math.PI*2)*Math.PI*2*amp,dy=B.y-A.y;
@@ -486,10 +523,10 @@ function crawlPose(now){
 // forward along the direction of travel. Neighbouring arms never step together; faster crawling means
 // more and quicker steps. Standing still, he just holds on with all eight.
 const FEET=[185,150,220,115,65,-40,30,-5].map(a=>a*Math.PI/180);
-let feet=null,lastBody=null,bodyV={x:0,y:0};
+let feet=null,lastBody=null,bodyV={x:0,y:0},feetFresh=false;
 function updateFeet(now,dt,bx,by){
  if(!(cp>0.02)||curtain||!oct.visible&&!inLogo){
-  if(feet){feet.forEach(f=>{if(f.tn.job===f)f.tn.job=null});feet=null}
+  if(feet){feet.forEach(f=>{if(f.tn.job===f)f.tn.job=null});feet=null;if(teamList)members().forEach(m=>m.classList.remove('linked'))}
   return;
  }
  const s=oct.scale.x,R=3.1*s*ppu;
@@ -500,6 +537,13 @@ function updateFeet(now,dt,bx,by){
   const la=LOGO.arms.map(a=>{const m=a[Math.floor(a.length/2)];return{a,ang:ang(Math.atan2(m[1]-LOGO.eye[1],m[0]-LOGO.eye[0]))}}).sort((x,y)=>x.ang-y.ang);
   [...feet].sort((a,b)=>ang(a.a)-ang(b.a)).forEach((f,i)=>{f.arm=la[i].a;f.logo=f.arm[f.arm.length-1];
    let c=0;f.fr=[0].concat(f.tn.lens.map(l=>c+=l)).map(v=>v/c)}); // where each joint sits along the arm
+  // one arm per team member: members in angular order seen from the perch, each takes the free arm
+  // pointing closest to it; the spare arms keep holding on to the page
+  if(teamList){const P=perch(),used=new Set();
+   [...members()].map((m,i)=>{const a=avatarAt(i);return{i,ang:ang(Math.atan2(a.y-P.y,a.x-P.x))}}).sort((x,y)=>x.ang-y.ang)
+    .forEach(m=>{let best=null,bd=1e9;for(const f of feet){if(used.has(f))continue;const d=Math.abs(ang(f.a)-m.ang);if(d<bd){bd=d;best=f}}
+     if(best){used.add(best);best.mem=m.i;best.order=m.i}})}
+  feetFresh=false;
   lastBody={x:bx,y:by};bodyV={x:0,y:0};
  }
  const id=Math.max(dt,1e-3),k6=Math.min(1,dt*6);
@@ -508,7 +552,10 @@ function updateFeet(now,dt,bx,by){
  const ideal=f=>({x:bx+Math.cos(f.a)*R+dx*lead,y:by+Math.sin(f.a)*R*0.85+dy*lead});
  let stepping=feet.filter(f=>f.st).length;
  const maxStep=sp>R*4?4:2;
- const cand=feet.filter(f=>!f.st).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
+ const q=cp-1;
+ for(const f of feet)if(f.mem!=null){f.pw=cl01((q-0.6-0.045*f.order)/0.12);f.pw=f.pw*f.pw*(3-2*f.pw)}else f.pw=0;
+ const ms=members();for(const f of feet)if(f.mem!=null&&ms[f.mem])ms[f.mem].classList.toggle('linked',f.pw>0.95);
+ const cand=feet.filter(f=>!f.st&&f.pw<0.1).map(f=>{const g=ideal(f);return{f,e:Math.hypot(f.x-g.x,f.y-g.y)}}).sort((a,b)=>b.e-a.e);
  for(const c of cand){
   if(lq>0.3||stepping>=maxStep||c.e<R*0.45)break;
   const i=feet.indexOf(c.f);if((feet[i-1]&&feet[i-1].st)||(feet[i+1]&&feet[i+1].st))continue;
@@ -528,6 +575,10 @@ function updateFeet(now,dt,bx,by){
    const L=logoAnchor(),gx=L.l+L.T*f.logo[0],gy=L.t+L.T*f.logo[1];
    x+=(gx-x)*lq;y+=(gy-y)*lq;
    if(lq>0.5&&!f.st){f.x=gx;f.y=gy}
+  }
+  if(f.pw>0){ // reach for the member's avatar
+   const a=avatarAt(f.mem);
+   if(a){x+=(a.x-x)*f.pw;y+=(a.y-y)*f.pw;if(f.pw>0.98){f.x=a.x;f.y=a.y;f.st=null}}
   }
   tn.tgt.copy(toW(x,y,z));
  }
@@ -588,6 +639,13 @@ function frame(now){
   if(lq>0&&tn.job&&tn.job.arm){ // final pose: every joint goes onto the traced line of its drawn arm
    const f=tn.job,L=logoAnchor(),z=0.2*oct.scale.x;
    for(let j=1;j<=N;j++){const q=armAt(f.arm,f.fr[j]);W3.copy(toW(L.l+L.T*q[0],L.t+L.T*q[1],z));oct.worldToLocal(W3);tn.p[j].lerp(W3,lq)}
+  }
+  if(tn.job&&tn.job.pw>0){
+   const f=tn.job,a=avatarAt(f.mem);
+   if(a){
+    W3.copy(tn.root);oct.localToWorld(W3);const r0=toS(W3),z=0.3*oct.scale.x,route=cableRoute(f.mem,r0);
+    if(route)for(let j=1;j<=N;j++){const q=armAt(route,f.fr[j]);W3.copy(toW(q[0],q[1],z));oct.worldToLocal(W3);tn.p[j].lerp(W3,f.pw)}
+   }
   }
   W3.copy(tn.p[N]);oct.localToWorld(W3);tn.tipS=toS(W3);
   W3.copy(tn.root);oct.localToWorld(W3);tn.rootS=toS(W3);

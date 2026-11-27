@@ -154,3 +154,8 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .foot-ig{display:inline-flex;align-items:center;gap:8px;text-decoration:none;color:var(--mut)}
 .foot-ig:hover{color:var(--ink)}
 @media(max-width:700px){.about{grid-template-columns:minmax(0,1fr)}.about-pic{max-width:260px;justify-self:center}}
+/* a team card the octopus has plugged an arm into */
+.member{transition:border-color .35s,box-shadow .35s}
+.member .av{transition:background .35s,color .35s,box-shadow .35s}
+.member.linked{border-color:var(--acc2);box-shadow:0 0 0 1px var(--acc2),0 10px 30px rgba(124,92,255,.28)}
+.member.linked .av{background:var(--acc);color:#fff;box-shadow:0 0 0 4px rgba(154,146,247,.35),0 0 22px rgba(154,146,247,.75)}
