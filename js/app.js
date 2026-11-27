@@ -437,7 +437,34 @@ if(!GL||RM){
 }
 
 /* ---------- events UI ---------- */
-chips.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b)startPull(b)});
+// Filters only hide the cards that don't match and slide the rest together (no octopus re-deal).
+// Tapping the active filter again, or All, brings every card back. Shuffle again still re-deals.
+let fseq=0;
+function applyFilter(f){
+ if(pull||cjobs.length||curtain)return;
+ if(jobs.length)skip();
+ if(f===filter&&f!=='all')f='all';
+ if(f===filter)return;
+ filter=f;setPressed(f);
+ const seq=++fseq,anim=!RM&&typeof Element.prototype.animate==='function';
+ const keep=new Set(list().map(e=>e.id));
+ const out=[...track.querySelectorAll('.card')].filter(c=>!keep.has(c.dataset.id));
+ const relayout=()=>{
+  if(seq!==fseq)return;
+  const first=new Map([...track.querySelectorAll('.card')].filter(c=>keep.has(c.dataset.id)).map(c=>[c.dataset.id,c.getBoundingClientRect()]));
+  const cs=render();track.scrollLeft=0;
+  if(!anim)return;
+  let k=0;
+  cs.forEach(c=>{
+   const a=first.get(c.dataset.id),b=c.getBoundingClientRect();
+   if(a){const dx=a.left-b.left,dy=a.top-b.top;if(dx||dy)c.animate([{transform:`translate(${dx}px,${dy}px)`},{transform:'none'}],{duration:380,easing:'cubic-bezier(.2,.8,.2,1)'})}
+   else c.animate([{opacity:0,transform:'translateY(14px) scale(.92)'},{opacity:1,transform:'none'}],{duration:320,delay:60+k++*45,easing:'cubic-bezier(.2,.8,.2,1)',fill:'backwards'});
+  });
+ };
+ if(!anim||!out.length){relayout();return}
+ Promise.all(out.map(c=>c.animate([{opacity:1,transform:'none'},{opacity:0,transform:'translateY(14px) scale(.88)'}],{duration:200,easing:'ease-in',fill:'forwards'}).finished)).then(relayout,relayout);
+}
+chips.addEventListener('click',e=>{const b=e.target.closest('[data-f]');if(b)applyFilter(b.dataset.f)});
 const mainChip=navEv;
 $('#shuffle').addEventListener('click',()=>startPull(chips.querySelector('[aria-pressed="true"]')||chips.querySelector('[data-f]')));
 $('#skip').addEventListener('click',skip);
