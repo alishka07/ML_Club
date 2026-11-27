@@ -229,7 +229,7 @@ function startPull(chip,after){
  const f=chip.dataset.f;
  if(!GL||RM){if(after)after(null);else deal(f);return}
  if(!introDone){if(!after)pending=chip;return}
- if(dv){if(after)teamQ=true;else pending=chip;return}
+ if(cp>0.02){if(after)teamQ=true;else pending=chip;return}
  if(pull||curtain||cjobs.length)return;
  skip();clearTimeout(backT);
  const c=rel(chip),tn=pickTN(c.x);if(!tn){if(after)after(null);else deal(f);return}
@@ -413,61 +413,47 @@ function endCurtain(){
  curtainEl.style.display='none';cv.style.zIndex='';
  curtain.grips.forEach(g=>g[0].job=null);curtain=null;needIntro=true;oct.visible=false;oct.scale.setScalar(sc);
 }
-/* ---------- the octopus dives into the logo picture and climbs back out ---------- */
-// Scroll to the About block: he swims to the empty frame, shrinks to its size and dives in; the drawn
-// logo appears in his place. Scroll back up to the events: the logo fades, he climbs out and swims home.
+/* ---------- the octopus crawls down the page with the scroll and dives into the logo ---------- */
+// The scroll position between the events shelf and the About block is the octopus's place on a wavy
+// path from the shelf to the empty logo frame: scrolling down he crawls along it (a little behind the
+// finger), shrinking to the frame's size; at the end he dives in and the drawn logo appears.
+// Scrolling back up he climbs out and crawls back to the shelf.
 const aboutPic=document.getElementById('aboutPic');
-let dv=null,blank=false;
+let cp=0,crawlV=0,inLogo=false,inT=0,blank=false;
 function tileAnchor(){
  const r=aboutPic.getBoundingClientRect(),T=r.width,s=T*0.8/(10.4*ppu);
  return{x:r.left+T/2-SR.left,y:r.top+(T-5.2*s*ppu)/2+3.1*s*ppu-SR.top,s};
 }
 const homeAnchor=()=>({x:homeS.x,y:homeS.y-lift*OH*0.07,s:sc});
-function checkDive(now){
+// 0: on the shelf (the whole stage still on screen), 1: in the picture (frame a bit below mid-screen)
+function crawlTarget(){
+ const B=tileAnchor(),s0=Math.max(0,SR.height-VH),s1=Math.max(s0+200,B.y-VH*0.55);
+ return cl01((-SR.top-s0)/(s1-s0));
+}
+function updateCrawl(dt,now){
  if(!aboutPic||!GL||RM)return;
- const r=aboutPic.getBoundingClientRect(),mid=r.top+r.height/2,stB=SR.bottom;
- if(!dv){
-  if(needIntro&&mid>VH*0.1&&mid<VH*0.9&&stB<VH*0.35){ // back from the Team curtain: he is already in the picture
-   needIntro=false;introDone=true;oct.visible=false;dv={st:'in'};aboutPic.classList.remove('empty');return}
-  if(introDone&&!needIntro&&oct.visible&&!jobs.length&&!pull&&!cjobs.length&&!curtain&&!push&&!teamQ&&!pending&&
-     mid>VH*0.2&&mid<VH*0.8&&stB<VH*0.35){
-   clearTimeout(backT);dv={st:'to',ts:now,a:{x:homeS.x+drift,y:homeS.y-lift*OH*0.07,s:sc}};
-  }
- }else if(dv.st==='in'&&stB>VH*0.55){
-  // picture still on screen: hop out of the frame; already scrolled away: just swim home
-  oct.visible=true;aboutPic.classList.add('empty');dv={st:r.bottom>0&&r.top<VH?'exit':'back',ts:now};
+ const tg=crawlTarget();
+ if(needIntro){ // after the Team curtain the page is below the logo: he is already inside the picture
+  if(tg<0.99)return;
+  needIntro=false;introDone=true;cp=1;inLogo=true;inT=-1e9;oct.visible=false;aboutPic.classList.remove('empty');
  }
+ const busy=jobs.length||pull||cjobs.length||curtain||push||!introDone;
+ const prev=cp,goal=busy?0:tg;
+ cp+=(goal-cp)*Math.min(1,dt*5);if(Math.abs(goal-cp)<0.002)cp=goal;
+ crawlV=crawlV*0.85+0.15*Math.abs(cp-prev)/Math.max(dt,1e-3);
+ if(!inLogo&&cp>=0.985){inLogo=true;inT=now;aboutPic.classList.remove('empty')}
+ else if(inLogo&&cp<0.95){inLogo=false;aboutPic.classList.add('empty');oct.visible=true}
+ if(inLogo&&now-inT>550)oct.visible=false;
+ // while crawling he goes over the event cards (at home the cards sit in front of his legs)
+ if(!curtain){const z=cp>0.02?'5':'';if(cv.style.zIndex!==z)cv.style.zIndex=z}
+ if(prev>0&&cp===0){oct.scale.setScalar(sc);onHome()}
 }
-// a swoopy swim from A to B; arms trail mid-way, body leans into the motion (never upside down)
-function swimPath(A,B,u,side){
- const k=ease(u),C={x:A.x+(B.x-A.x)*0.25+side*W*0.14,y:A.y+(B.y-A.y)*0.55};
- const x=(1-k)*(1-k)*A.x+2*(1-k)*k*C.x+k*k*B.x,y=(1-k)*(1-k)*A.y+2*(1-k)*k*C.y+k*k*B.y;
- const dx=2*(1-k)*(C.x-A.x)+2*k*(B.x-C.x),dy=2*(1-k)*(C.y-A.y)+2*k*(B.y-C.y);
- const ang=Math.max(-0.9,Math.min(0.9,Math.atan2(dx,Math.abs(dy)+1)));
- const m=Math.sin(Math.PI*u);
- return{x,y,s:A.s+(B.s-A.s)*k,rot:-ang*m,stand:1-0.9*m,pulse:Math.max(0,Math.sin(u*Math.PI*9))*m};
-}
-function updateDive(now){
- const e=now-dv.ts,B=tileAnchor();
- if(dv.st==='to'){
-  const u=cl01(e/1500),d=swimPath(dv.a,B,u,1);
-  if(u>=1){dv={st:'enter',ts:now};aboutPic.classList.remove('empty')}
-  return d;
- }
- if(dv.st==='enter'){ // the picture fades in over him
-  const u=cl01(e/700);if(u>=1){dv={st:'in'};oct.visible=false}
-  return{x:B.x,y:B.y,s:B.s*(1-0.12*ease(u)),rot:0,stand:1,pulse:0};
- }
- if(dv.st==='exit'){ // the picture fades out and he hops out of the frame
-  const u=cl01(e/650);if(u>=1)dv={st:'back',ts:now};
-  return{x:B.x,y:B.y-Math.sin(Math.PI*u)*B.s*ppu*0.9,s:B.s,rot:0,stand:1,pulse:0};
- }
- if(dv.st==='back'){
-  const u=cl01(e/1250),d=swimPath(B,homeAnchor(),u,-1);
-  if(u>=1){dv=null;oct.scale.setScalar(sc);onHome()}
-  return d;
- }
- return{x:B.x,y:B.y,s:B.s,rot:0,stand:1,pulse:0};
+function crawlPose(now){
+ const A=homeAnchor(),B=tileAnchor(),p=cp,k=p*p*(3-2*p),amp=W*0.16;
+ const x=A.x+(B.x-A.x)*p+Math.sin(p*Math.PI*2)*amp,y=A.y+(B.y-A.y)*p;
+ const dx=(B.x-A.x)+Math.cos(p*Math.PI*2)*Math.PI*2*amp,dy=B.y-A.y;
+ const ang=Math.max(-0.8,Math.min(0.8,Math.atan2(dx,Math.abs(dy)+1))),m=Math.sin(Math.PI*p);
+ return{x,y,s:A.s+(B.s-A.s)*k,rot:-ang*m*0.8,stand:1-0.75*m,pulse:Math.min(1,crawlV*4)*Math.max(0,Math.sin(now*0.013))};
 }
 function onHome(){if(teamQ){teamQ=false;pending=null;runTeam();return}if(pending){const p=pending;pending=null;startPull(p)}}
 function onIntroDone(){introDone=true;if(teamQ){teamQ=false;pending=null;runTeam();return}if(!dealt)navEv.classList.add('pulse');if(pending){const p=pending;pending=null;startPull(p)}}
@@ -477,15 +463,15 @@ function frame(now){
  requestAnimationFrame(frame);
  const dt=Math.min(0.05,(now-last)/1000);last=now;
  SR=stage.getBoundingClientRect();
- checkDive(now);
- const idle=!vis&&!jobs.length&&!pull&&!push&&!curtain&&introDone&&(!dv||dv.st==='in');
+ updateCrawl(dt,now);
+ const idle=!vis&&!jobs.length&&!pull&&!push&&!curtain&&introDone&&(cp===0||(inLogo&&!oct.visible));
  if(idle&&blank)return;blank=idle;
  if(introS===null)introS=now;
  tt+=RM?0:dt;
  // intro: swim in, then stand up
  const it=(now-introS)/1000;let px,py,rot,stand,pulse=0;
  if(curtain){px=homeS.x;py=curtain.base;rot=0;stand=1;oct.scale.setScalar(sc*curtain.cs)}
- else if(dv){const d=updateDive(now);px=d.x;py=d.y;rot=d.rot;stand=d.stand;pulse=d.pulse;oct.scale.setScalar(d.s)}
+ else if(cp>0){const d=crawlPose(now);px=d.x;py=d.y;rot=d.rot;stand=d.stand;pulse=d.pulse;oct.scale.setScalar(d.s)}
  else if(RM||it>=SWIM+SET){px=homeS.x;py=homeS.y;rot=0;stand=1;if(!introDone)onIntroDone()}
  else if(it<SWIM){
   const u=it/SWIM,e=cl01(1-Math.pow(1-u,2.4)+0.03*Math.sin(u*Math.PI*6)*(1-u));
@@ -497,7 +483,7 @@ function frame(now){
  }else{
   const u=(it-SWIM)/SET;px=homeS.x;py=homeS.y-Math.sin(Math.PI*u)*12;rot=rotEnd*(1-ease(u));stand=outBack(u);
  }
- lift+=(liftT-lift)*Math.min(1,dt*1.8);if(!curtain&&!dv)py-=lift*OH*0.07;
+ lift+=(liftT-lift)*Math.min(1,dt*1.8);if(!curtain&&cp===0)py-=lift*OH*0.07;
  poseT+=RM?0:dt*(curtain&&curtain.st===3?3:1);
  // lean toward whatever a tentacle is busy with
  let sx=0,n=0;for(const j of jobs)if(j.st===1||j.st===2){sx+=j.tx;n++}
@@ -507,7 +493,7 @@ function frame(now){
  const dp=n?Math.max(-W*0.22,Math.min(W*0.22,(sx/n-W/2)*0.45)):0;
  drift+=(dp-drift)*Math.min(1,dt*2.2);
  const hw=toW(px+drift,py,0);
- oct.position.set(hw.x,hw.y+(stand>=1&&!dv?Math.sin(tt*1.1)*0.06*sc:0),0);
+ oct.position.set(hw.x,hw.y+(stand>=1&&cp===0?Math.sin(tt*1.1)*0.06*sc:0),0);
  oct.rotation.x=0.3*stand;oct.rotation.z=rot-drift/ppu*0.04;
  mg.rotation.z=Math.sin(tt*0.9)*0.03;
  oct.updateMatrixWorld(true);
@@ -559,7 +545,7 @@ function applyFilter(f){
  const seq=++fseq,anim=!RM&&typeof Element.prototype.animate==='function';
  const keep=new Set(list().map(e=>e.id));
  const out=[...track.querySelectorAll('.card')].filter(c=>!keep.has(c.dataset.id));
- if(GL&&!RM&&introDone&&dealt&&!dv){
+ if(GL&&!RM&&introDone&&dealt&&cp<0.02){
   const back=()=>{
    const first=new Map([...track.querySelectorAll('.card')].filter(c=>keep.has(c.dataset.id)).map(c=>[c.dataset.id,c.getBoundingClientRect()]));
    const cs=render();track.scrollLeft=0;
@@ -599,7 +585,7 @@ const navTeam=document.querySelector('.links a[href="#team"]');
 // (short screens, phones) it first scrolls back up to the octopus; during its entrance it waits for it.
 function runTeam(){
  if(curtain||(pull&&pull.after))return;
- if(!introDone||dv){teamQ=true;return}
+ if(!introDone||cp>0.02){teamQ=true;return}
  if(jobs.length||push||pull||cjobs.length)skip();
  startPull(navTeam,()=>startCurtain());
 }

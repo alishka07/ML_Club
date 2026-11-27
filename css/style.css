@@ -134,7 +134,7 @@ footer .wrap{display:flex;gap:12px 24px;flex-wrap:wrap;justify-content:space-bet
 .lang:hover{color:var(--ink);border-color:var(--acc2)}
 .lang:focus-visible{outline:3px solid var(--acc2);outline-offset:2px}
 .about{display:grid;grid-template-columns:minmax(200px,340px) minmax(0,1fr);gap:clamp(24px,5vw,64px);align-items:center}
-.about-pic{position:relative;z-index:1;width:100%;border-radius:28px;transform:rotate(-2deg)}
+.about-pic{position:relative;z-index:6;width:100%;border-radius:28px;transform:rotate(-2deg)}
 .about-pic::before{content:"";position:absolute;inset:0;border-radius:28px;border:2px dashed rgba(154,146,247,.5);background:rgba(43,39,80,.3);opacity:0;transition:opacity .4s}
 .about-pic.empty::before{opacity:1}
 .about-logo{display:block;width:100%;height:auto;border-radius:28px;background:#fff;box-shadow:0 18px 50px rgba(91,76,240,.25),0 0 0 1px var(--line);transition:opacity .5s ease,transform .7s cubic-bezier(.3,1.6,.5,1)}
